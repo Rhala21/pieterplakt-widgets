@@ -1,4 +1,4 @@
-https://hook.eu1.make.com/l3k3ofbyejfu2ov33k4gz87npymd3ns9/* ================================================================
+/* ================================================================
    PIETER PLAKT — PRIJSCONFIGURATOR WIDGET
    ----------------------------------------------------------------
    Gebruik in Webflow:
@@ -27,7 +27,7 @@ https://hook.eu1.make.com/l3k3ofbyejfu2ov33k4gz87npymd3ns9/* ===================
     disclaimer: "Aan de getoonde prijzen kunnen geen rechten worden ontleend. Prijzen onder voorbehoud van fouten en wijzigingen.",
     // Verzendadres van het formulier (FormSubmit, gratis). Eerste aanvraag activeert
     // de koppeling: je krijgt dan eenmalig een bevestigingsmail op info@pieterplakt.nl.
-    formEndpoint: "https://formsubmit.co/ajax/info@pieterplakt.nl",
+    formEndpoint: "https://formsubmit.co/info@pieterplakt.nl",
   };
 
   /* ----------------------------------------------------------------
@@ -739,21 +739,32 @@ https://hook.eu1.make.com/l3k3ofbyejfu2ov33k4gz87npymd3ns9/* ===================
           _autoresponse: "Bedankt voor je aanvraag bij Pieter Plakt!\n\nDit is jouw overzicht:\n\n" + overzicht +
             "\n\nWij sturen binnen 2 werkdagen een mailtje met de eerst beschikbare mogelijkheid. Kun je daar niet op wachten? Neem dan telefonisch contact met ons op via " + CONFIG.telefoon + ".\n\n" + CONFIG.disclaimer,
         };
-        let ok = false;
-        try {
-          const r = await fetch(CONFIG.formEndpoint, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Accept": "application/json" },
-            body: JSON.stringify(payload),
-          });
-          ok = r.ok;
-        } catch (e) { ok = false; }
-        if (!ok) {
-          btn.disabled = false;
-          btn.textContent = "Aanvraag versturen";
-          alert("Het versturen is helaas niet gelukt. Probeer het opnieuw of neem telefonisch contact op via " + CONFIG.telefoon + ".");
-          return;
+        payload._captcha = "false";
+        // Versturen via een verborgen formulier-post: werkt vanaf elk domein, zonder CORS-beperkingen
+        let frame = document.getElementById("pp-mailframe");
+        if (!frame) {
+          frame = document.createElement("iframe");
+          frame.id = "pp-mailframe";
+          frame.name = "pp-mailframe";
+          frame.style.display = "none";
+          document.body.appendChild(frame);
         }
+        const f = document.createElement("form");
+        f.method = "POST";
+        f.action = CONFIG.formEndpoint;
+        f.target = "pp-mailframe";
+        f.style.display = "none";
+        Object.keys(payload).forEach((k) => {
+          const inp = document.createElement("input");
+          inp.type = "hidden";
+          inp.name = k;
+          inp.value = payload[k];
+          f.appendChild(inp);
+        });
+        document.body.appendChild(f);
+        f.submit();
+        await new Promise((r) => setTimeout(r, 900));
+        f.remove();
       }
       $("quoteForm").classList.add("pp-hidden");
       $("summaryBox").classList.add("pp-hidden");
