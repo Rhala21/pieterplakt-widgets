@@ -24,6 +24,10 @@
     email: "info@pieterplakt.nl",
     plaats: "Burgum",
     vanafPrijs: 175,               // getoond als "vanaf \u20ac 175" totdat een carrosserietype is gekozen
+    disclaimer: "Aan de getoonde prijzen kunnen geen rechten worden ontleend. Prijzen onder voorbehoud van fouten en wijzigingen.",
+    // Verzendadres van het formulier (FormSubmit, gratis). Eerste aanvraag activeert
+    // de koppeling: je krijgt dan eenmalig een bevestigingsmail op info@pieterplakt.nl.
+    formEndpoint: "https://formsubmit.co/ajax/info@pieterplakt.nl",
   };
 
   /* ----------------------------------------------------------------
@@ -483,11 +487,20 @@
         (!t.totBouwjaar || (jaar && jaar <= t.totBouwjaar))
       ) || null;
     }
-    function bodyVanRdw(v) {
-      const inr = (v.inrichting || "").toLowerCase();
+    function bodyVanRdw(v, carr) {
       const deuren = parseInt(v.aantal_deuren, 10) || 0;
       const soort = (v.voertuigsoort || "").toLowerCase();
+      const inr = (v.inrichting || "").toLowerCase();
+      // 1) Europese carrosseriecode (betrouwbaarst): AA=sedan, AB=hatchback, AC=station, AD=coupé, AE=cabrio, AF=MPV
+      const code = carr ? String(carr.carrosserietype || "").toUpperCase() : "";
+      const oms = carr ? String(carr.type_carrosserie_europese_omschrijving || "").toLowerCase() : "";
       if (soort.includes("bedrijfsauto") || inr.includes("gesloten opbouw") || inr.includes("bestel")) return "bus";
+      if (code === "AB" || oms.includes("hatchback")) return deuren >= 4 ? "h5" : "h3";
+      if (code === "AA" || oms.includes("sedan")) return "sedan";
+      if (code === "AC" || oms.includes("station")) return "suv5";
+      if (code === "AD" || code === "AE" || oms.includes("coup") || oms.includes("cabrio")) return "coupe";
+      if (code === "AF" || oms.includes("multipurpose") || oms.includes("mpv")) return "suv5";
+      // 2) Terugvallen op het inrichting-veld
       if (inr.includes("pick")) return "pickup";
       if (inr.includes("hatchback")) return deuren >= 4 ? "h5" : "h3";
       if (inr.includes("sedan")) return "sedan";
@@ -503,8 +516,13 @@
       if (raw.length < 6) { status.textContent = ""; update(); return; }
       status.textContent = "Kenteken opzoeken\u2026";
       try {
-        const res = await fetch("https://opendata.rdw.nl/resource/m9d7-ebf2.json?kenteken=" + encodeURIComponent(raw));
+        const [res, resCarr] = await Promise.all([
+          fetch("https://opendata.rdw.nl/resource/m9d7-ebf2.json?kenteken=" + encodeURIComponent(raw)),
+          fetch("https://opendata.rdw.nl/resource/vezc-m2t6.json?kenteken=" + encodeURIComponent(raw)).catch(() => null),
+        ]);
         const data = await res.json();
+        let carr = null;
+        try { const c = resCarr ? await resCarr.json() : null; carr = Array.isArray(c) && c.length ? c[0] : null; } catch (e) {}
         if (Array.isArray(data) && data.length) {
           const v = data[0];
           const jaar = v.datum_eerste_toelating ? parseInt(String(v.datum_eerste_toelating).slice(0, 4), 10) : null;
@@ -512,11 +530,11 @@
           state.modelToeslag = zoekMatch(MODEL_TOESLAGEN, state.rdw.merk, state.rdw.model, jaar);
           let extra = state.modelToeslag ? " \u00b7 modeltoeslag " + state.modelToeslag.label + " van toepassing" : "";
           const typeMatch = zoekMatch(MODEL_TYPES, state.rdw.merk, state.rdw.model, jaar);
-          const autoBody = (typeMatch && PRIJZEN[typeMatch.body]) ? typeMatch.body : bodyVanRdw(v);
+          const autoBody = (typeMatch && PRIJZEN[typeMatch.body]) ? typeMatch.body : bodyVanRdw(v, carr);
           if (autoBody && PRIJZEN[autoBody]) {
             state.body = autoBody;
             selectOne($("bodyGrid"), state.body);
-            extra += " \u00b7 type automatisch geselecteerd (aanpassen kan)";
+            extra += " \u00b7 type automatisch geselecteerd \u2014 klopt het niet? Pas het hieronder aan";
           }
           status.innerHTML = "\u2713 Gevonden: <strong>" + state.rdw.merk + " " + state.rdw.model + (jaar ? " (" + jaar + ")" : "") + "</strong>" + extra;
         } else {
@@ -676,13 +694,66 @@
         ${pkg ? `<div class="pp-row"><span>Foliepakket zijruiten/achterruit</span><span>${pkg}</span></div>` : ""}
         ${rows.map(([n, p]) => `<div class="pp-row"><span>${n}</span><span class="pp-r-price">${typeof p === "number" ? euro(p) : p}</span></div>`).join("")}
         <div class="pp-row pp-total-row"><span>Totaalbedrag</span><span class="pp-r-price">${euro(total)}</span></div>
-        <p class="pp-note">Inclusief BTW en installatie \u00b7 Datum afspraak in overleg \u00b7 Tintpercentage kan op locatie bepaald worden</p>`;
+        <p class="pp-note">Inclusief BTW en installatie \u00b7 Datum afspraak in overleg \u00b7 Tintpercentage kan op locatie bepaald worden</p>
+        <p class="pp-note">${CONFIG.disclaimer}</p>`;
     }
 
-    function submit() {
+    function bouwOverzicht() {
+      const kent = $("kenteken").value.trim().toUpperCase();
+      if (isQuoteFlow()) {
+        const cat = CATS.find((c) => c.id === state.cat);
+        return "Categorie: " + cat.name + "\nPrijs: op aanvraag (offerte volgt)";
+      }
+      const { rows, total } = calc();
+      const body = BODIES.find((b) => b.id === state.body);
+      const pkg = state.pkg && state.windows.size ? PKGS.find((p) => p.id === state.pkg).name : "";
+      return "Voertuig: " + (state.rdw ? state.rdw.merk + " " + state.rdw.model + " \u00b7 " : "") + (body ? body.name : "") + (kent ? " \u00b7 " + kent : "") +
+        (pkg ? "\nFoliepakket zijruiten/achterruit: " + pkg : "") + "\n" +
+        rows.map(([n, p]) => n + ": " + (typeof p === "number" ? euro(p) : p)).join("\n") +
+        "\nTotaalbedrag: " + euro(total) + " (inclusief BTW en installatie)";
+    }
+
+    async function submit() {
       if (!$("fn").value.trim() || !$("em").value.trim() || !$("tel").value.trim()) {
         alert("Vul de verplichte velden in (voornaam, e-mailadres en telefoonnummer).");
         return;
+      }
+      if (CONFIG.formEndpoint) {
+        const btn = $("btnNext");
+        btn.disabled = true;
+        btn.textContent = "Versturen\u2026";
+        const overzicht = bouwOverzicht();
+        const payload = {
+          Voornaam: $("fn").value.trim(),
+          Achternaam: $("ln").value.trim(),
+          "E-mailadres": $("em").value.trim(),
+          Telefoonnummer: $("tel").value.trim(),
+          Voorkeursdatum: $("wanneer").value,
+          Locatie: $("loc").value.trim(),
+          Kenteken: $("kenteken").value.trim().toUpperCase(),
+          Bericht: $("msg").value.trim(),
+          Overzicht: overzicht,
+          _subject: "Nieuwe aanvraag ramen blinderen \u2014 " + $("fn").value.trim() + " " + $("ln").value.trim(),
+          _replyto: $("em").value.trim(),
+          _template: "table",
+          _autoresponse: "Bedankt voor je aanvraag bij Pieter Plakt!\n\nDit is jouw overzicht:\n\n" + overzicht +
+            "\n\nWij sturen binnen 2 werkdagen een mailtje met de eerst beschikbare mogelijkheid. Kun je daar niet op wachten? Neem dan telefonisch contact met ons op via " + CONFIG.telefoon + ".\n\n" + CONFIG.disclaimer,
+        };
+        let ok = false;
+        try {
+          const r = await fetch(CONFIG.formEndpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Accept": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          ok = r.ok;
+        } catch (e) { ok = false; }
+        if (!ok) {
+          btn.disabled = false;
+          btn.textContent = "Aanvraag versturen";
+          alert("Het versturen is helaas niet gelukt. Probeer het opnieuw of neem telefonisch contact op via " + CONFIG.telefoon + ".");
+          return;
+        }
       }
       $("quoteForm").classList.add("pp-hidden");
       $("summaryBox").classList.add("pp-hidden");
@@ -703,7 +774,7 @@
       const { total } = calc();
       $("totalAmt").textContent = isQuoteFlow() ? "Op aanvraag" :
         (state.body ? euro(total) : "vanaf " + euro(CONFIG.vanafPrijs));
-      $("btwLine").textContent = isQuoteFlow() ? "Maatwerk \u00b7 offerte binnen 3 werkdagen" : "Inclusief BTW \u00b7 inclusief installatie";
+      $("btwLine").textContent = isQuoteFlow() ? "Maatwerk \u00b7 offerte binnen 3 werkdagen" : "Inclusief BTW \u00b7 inclusief installatie \u00b7 prijzen onder voorbehoud";
       $("btnPrev").disabled = state.step === 1;
       $("btnNext").disabled = !stepValid();
       $("btnNext").textContent = state.step === 5 ? "Aanvraag versturen" :
