@@ -639,7 +639,14 @@
       }
       const V = C[view];
       svg.setAttribute("viewBox", V.vb);
-      svg.innerHTML = V.art +
+      // verloop-ID's uniek maken per preview, anders breekt de kleur zodra
+      // dezelfde tekening in twee previews staat (verborgen paneel wint de ID)
+      const uid = (svg.dataset.pp || svg.getAttribute("data-pp") || "pp") + "-" + view + "-" + Math.random().toString(36).slice(2, 7);
+      const artU = V.art
+        .replace(/id="([^"]+)"/g, 'id="$1-' + uid + '"')
+        .replace(/url\((['"]?)#([^)'"]+)\1\)/g, "url(#$2-" + uid + ")")
+        .replace(/href="#([^"]+)"/g, 'href="#$1-' + uid + '"');
+      svg.innerHTML = artU +
         V.overlays.map((o) => `<polygon class="pp-win" data-w="${o.w}" points="${o.pts}"/>`).join("") +
         (V.zb ? `<polygon class="pp-zb" points="${V.zb}"/>` : "");
       svg.dataset.view = view;
