@@ -363,7 +363,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
     <p class="pp-step-sub">Het pakket geldt voor de zijruiten en achterruit. Alle pakketten zijn inclusief installatie en montage.</p>
     <div class="pp-preview">
       <svg data-pp="carSvg2" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Livebeeld tintniveau"></svg>
-      <div class="pp-hint">Livebeeld van het tintniveau van jouw pakket \u00b7 v3.3</div>
+      <div class="pp-hint">Livebeeld van het tintniveau van jouw pakket \u00b7 v3.4</div>
     </div>
     <div class="pp-grid pp-c2" data-pp="pkgGrid"></div>
   </section>
@@ -374,7 +374,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
     <p class="pp-step-sub">Selecteer de ruiten. In het livebeeld zie je direct welke ruiten getint worden.</p>
     <div class="pp-preview">
       <svg data-pp="carSvg" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Livebeeld van geselecteerde ruiten"></svg>
-      <div class="pp-hint">Livebeeld \u2014 jouw pakketkeuze bepaalt hoe donker de tint is \u00b7 v3.3</div>
+      <div class="pp-hint">Livebeeld \u2014 jouw pakketkeuze bepaalt hoe donker de tint is \u00b7 v3.4</div>
     </div>
 
     <h4 class="pp-group-title">Voorzijde</h4>
@@ -553,10 +553,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
           const typeMatch = zoekMatch(MODEL_TYPES, state.rdw.merk, state.rdw.model, jaar);
           const autoBody = (typeMatch && PRIJZEN[typeMatch.body]) ? typeMatch.body : bodyVanRdw(v, carr);
           if (autoBody && PRIJZEN[autoBody]) {
-            state.body = autoBody;
-            selectOne($("bodyGrid"), state.body);
-            delete $("carSvg").dataset.view; delete $("carSvg2").dataset.view;
-            ensureCar();
+            kiesType(autoBody);
             extra += autoBody === "suv5"
               ? " \u00b7 herkend als Station/SUV \u2014 rijd je een hatchback? Pas het type hieronder aan"
               : " \u00b7 type automatisch geselecteerd \u2014 klopt het niet? Pas het hieronder aan";
@@ -577,7 +574,16 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
     bindCards($("catGrid"), (id) => { state.cat = id; selectOne($("catGrid"), id); update(); });
 
     $("bodyGrid").innerHTML = BODIES.map(cardHTML).join("");
-    bindCards($("bodyGrid"), (id) => { state.body = id; state.windows = new Set(["achterportieren"]); selectOne($("bodyGrid"), id); delete $("carSvg").dataset.view; delete $("carSvg2").dataset.view; ensureCar(); update(); });
+    function kiesType(id) {
+      state.body = id;
+      state.windows = new Set(["achterportieren"]);
+      selectOne($("bodyGrid"), id);
+      delete $("carSvg").dataset.view;
+      delete $("carSvg2").dataset.view;
+      ensureCar(() => update());
+      update();
+    }
+    bindCards($("bodyGrid"), (id) => kiesType(id));
 
     $("pkgGrid").innerHTML = PKGS.map(cardHTML).join("");
     bindCards($("pkgGrid"), (id) => { state.pkg = id; selectOne($("pkgGrid"), id); update(); });
