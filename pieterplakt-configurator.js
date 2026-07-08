@@ -251,10 +251,12 @@
 .pp-preview svg.pp-out-l{transform:rotateY(-72deg) translateZ(-70px) scale(.94);opacity:0}
 .pp-preview svg.pp-out-r{transform:rotateY(72deg) translateZ(-70px) scale(.94);opacity:0}
 .pp-car{fill:var(--pp-black)}
-.pp-win{fill:#0a0d12;opacity:0;transition:opacity .35s,fill .35s;pointer-events:none}
-.pp-win.pp-tinted{opacity:var(--pp-tint,.75)}
-.pp-zb{fill:var(--pp-yellow);opacity:0;transition:opacity .35s}
-.pp-zb.pp-on{opacity:.85}
+.pp-win{transition:fill .35s;pointer-events:none}
+.pp-zb{fill:var(--pp-yellow);opacity:0;transition:opacity .35s;stroke:var(--pp-yellow);stroke-width:0;stroke-linejoin:round}
+svg[data-view="side"] .pp-zb{stroke-width:1.4}
+.pp-zb.pp-on{opacity:.96}
+.pp-zbm{opacity:0;transition:opacity .35s;pointer-events:none}
+.pp-zbm.pp-on{opacity:1}
 
 .pp-kenteken{display:flex;gap:0;max-width:340px;margin-bottom:8px;border-radius:12px;overflow:hidden;border:1.5px solid var(--pp-grey)}
 .pp-kenteken .pp-nl{background:#003399;color:#fff;font-weight:600;font-size:12px;display:grid;place-items:center;padding:0 12px}
@@ -361,7 +363,7 @@
     <p class="pp-step-sub">Het pakket geldt voor de zijruiten en achterruit. Alle pakketten zijn inclusief installatie en montage.</p>
     <div class="pp-preview">
       <svg data-pp="carSvg2" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Livebeeld tintniveau"></svg>
-      <div class="pp-hint">Livebeeld van het tintniveau van jouw pakket</div>
+      <div class="pp-hint">Livebeeld van het tintniveau van jouw pakket \u00b7 v3.3</div>
     </div>
     <div class="pp-grid pp-c2" data-pp="pkgGrid"></div>
   </section>
@@ -372,7 +374,7 @@
     <p class="pp-step-sub">Selecteer de ruiten. In het livebeeld zie je direct welke ruiten getint worden.</p>
     <div class="pp-preview">
       <svg data-pp="carSvg" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Livebeeld van geselecteerde ruiten"></svg>
-      <div class="pp-hint">Livebeeld \u2014 jouw pakketkeuze bepaalt hoe donker de tint is</div>
+      <div class="pp-hint">Livebeeld \u2014 jouw pakketkeuze bepaalt hoe donker de tint is \u00b7 v3.3</div>
     </div>
 
     <h4 class="pp-group-title">Voorzijde</h4>
@@ -646,26 +648,30 @@
         .replace(/id="([^"]+)"/g, 'id="$1-' + uid + '"')
         .replace(/url\((['"]?)#([^)'"]+)\1\)/g, "url(#$2-" + uid + ")")
         .replace(/href="#([^"]+)"/g, 'href="#$1-' + uid + '"');
-      svg.innerHTML = artU +
-        V.overlays.map((o) => `<polygon class="pp-win" data-w="${o.w}" points="${o.pts}"/>`).join("") +
-        (V.zb ? `<polygon class="pp-zb" points="${V.zb}"/>` : "");
+      svg.innerHTML = artU;
       svg.dataset.view = view;
+    }
+    function mengTint(donker, a) {
+      // donkere tint gemengd met de glaskleur (#e9eef2) — zo kleurt de vectorvorm zelf
+      const d = [1, 3, 5].map((i) => parseInt(donker.slice(i, i + 2), 16));
+      const g = [233, 238, 242];
+      return "#" + d.map((v, i) => Math.round(a * v + (1 - a) * g[i]).toString(16).padStart(2, "0")).join("");
     }
     function paintSvg(svg) {
       const tint = state.pkg ? PKGS.find((p) => p.id === state.pkg).tint : 0.65;
       svg.querySelectorAll(".pp-win").forEach((w) => {
         let key = w.dataset.w;
         if (key === "kwart") key = state.body === "bus" ? "zijramen" : "achterportieren";
+        if (key === "busachter") key = state.windows.has("achterportieren") ? "achterportieren" : "achterruit";
         const isVR = key === "voorruit";
         let on = isVR ? !!state.voorzijde : state.windows.has(key);
         // het zichtbare randje van de achterruit in het zijaanzicht kleurt ook mee met achterportieren/achterklep
         if (key === "achterruit" && svg.dataset.view === "side" && !on) on = state.windows.has("achterportieren");
-        w.classList.toggle("pp-tinted", on);
-        w.style.setProperty("--pp-tint", isVR ? 0.7 : tint);
-        w.style.fill = isVR && state.voorzijde === "chameleon" ? "#3B4E9E" : "#0a0d12";
+        w.style.fill = on
+          ? (isVR && state.voorzijde === "chameleon" ? mengTint("#3B4E9E", 0.8) : mengTint("#0a0d12", isVR ? 0.7 : tint))
+          : "#e9eef2";
       });
-      const zb = svg.querySelector(".pp-zb");
-      if (zb) zb.classList.toggle("pp-on", state.zonneband);
+      svg.querySelectorAll(".pp-zb").forEach((zb) => zb.classList.toggle("pp-on", state.zonneband));
     }
     function paintCar() {
       const c1 = $("carSvg"), c2 = $("carSvg2");
