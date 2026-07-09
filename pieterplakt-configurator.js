@@ -301,6 +301,8 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
 .pp-raam .pp-m2{font-size:13px;color:var(--pp-text-body);white-space:nowrap;min-width:78px}
 .pp-raam .pp-x{border:0;background:none;color:var(--pp-text-body);font-size:16px;cursor:pointer;padding:2px 6px}
 .pp-raam .pp-x:hover{color:var(--pp-black)}
+.pp-raam .pp-dup{border:0;background:none;color:var(--pp-text-body);font-size:15px;cursor:pointer;padding:2px 4px;line-height:1}
+.pp-raam .pp-dup:hover{color:var(--pp-black)}
 .pp-x-floor{border:0;background:none;color:var(--pp-text-body);font-size:16px;cursor:pointer;padding:2px 7px;vertical-align:1px}
 .pp-x-floor:hover{color:var(--pp-black)}
 .pp-btn.pp-mini{padding:9px 18px;font-size:13px;background:var(--pp-white);color:var(--pp-black);border-color:var(--pp-grey);margin-top:2px}
@@ -385,7 +387,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
     <p class="pp-step-sub">Het pakket geldt voor de zijruiten en achterruit. Alle pakketten zijn inclusief installatie en montage.</p>
     <div class="pp-preview">
       <svg data-pp="carSvg2" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Livebeeld tintniveau"></svg>
-      <div class="pp-hint">Livebeeld van het tintniveau van jouw pakket \u00b7 v4.0</div>
+      <div class="pp-hint">Livebeeld van het tintniveau van jouw pakket \u00b7 v3.9</div>
     </div>
     <div class="pp-grid pp-c2" data-pp="pkgGrid"></div>
   </section>
@@ -396,7 +398,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
     <p class="pp-step-sub">Selecteer de ruiten. In het livebeeld zie je direct welke ruiten getint worden.</p>
     <div class="pp-preview">
       <svg data-pp="carSvg" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Livebeeld van geselecteerde ruiten"></svg>
-      <div class="pp-hint">Livebeeld \u2014 jouw pakketkeuze bepaalt hoe donker de tint is \u00b7 v4.0</div>
+      <div class="pp-hint">Livebeeld \u2014 jouw pakketkeuze bepaalt hoe donker de tint is \u00b7 v3.9</div>
     </div>
 
     <h4 class="pp-group-title">Voorzijde</h4>
@@ -458,8 +460,14 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
             <option>Over 1 week</option><option>Over 2 weken</option><option>Over 3 weken</option><option>Later</option>
           </select>
         </div>
-        <div class="pp-field" data-pp="locField" style="display:none"><label>Straatnaam + huisnummer*</label><input data-pp="locStraat" placeholder="bijv. Staniasingel 4"></div>
-        <div class="pp-field" data-pp="locField2" style="display:none"><label>Postcode*</label><input data-pp="locPc" placeholder="bijv. 9062 GM"></div>
+        <div data-pp="locField" style="display:none;grid-column:1/-1">
+          <div class="pp-form-grid">
+            <div class="pp-field"><label>Straat*</label><input data-pp="locStraat" placeholder="Straatnaam"></div>
+            <div class="pp-field"><label>Huisnummer*</label><input data-pp="locNr" placeholder="12"></div>
+            <div class="pp-field"><label>Postcode*</label><input data-pp="locPc" placeholder="1234 AB"></div>
+            <div class="pp-field"><label>Dorp/Stad*</label><input data-pp="locPlaats" placeholder="Plaatsnaam"></div>
+          </div>
+        </div>
       </div>
       <div class="pp-field"><label>Bericht</label><textarea data-pp="msg" rows="3"></textarea></div>
       <div class="pp-summary">
@@ -889,6 +897,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
             <span>\u00d7</span>
             <input class="pp-dim" inputmode="decimal" placeholder="hoogte (cm)" aria-label="hoogte in centimeters" value="${r.h}">
             <span class="pp-m2">= ${m2str(raamM2(getal(r.b), getal(r.h)))} m\u00b2</span>
+            <button type="button" class="pp-dup" title="Raam dupliceren">\u29c9</button>
             <button type="button" class="pp-x" title="Raam verwijderen">\u00d7</button>
           </div>`).join("")}
         <button type="button" class="pp-btn pp-mini" data-f="${fi}" data-add="1">+ Raam toevoegen</button>
@@ -909,6 +918,12 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
           const fl = state.pand.floors[+row.dataset.f];
           fl.ramen.splice(+row.dataset.r, 1);
           if (!fl.ramen.length) fl.ramen.push({ ref: "", b: "", h: "" });
+          renderFloors(); update();
+        });
+        row.querySelector(".pp-dup").addEventListener("click", () => {
+          const fl = state.pand.floors[+row.dataset.f];
+          const src = fl.ramen[+row.dataset.r];
+          fl.ramen.splice(+row.dataset.r + 1, 0, { ref: src.ref, b: src.b, h: src.h });
           renderFloors(); update();
         });
       });
@@ -934,9 +949,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
     });
 
     function renderSummary() {
-      const locZichtbaar = (state.cat === "machine" || state.cat === "pand") ? "" : "none";
-      $("locField").style.display = locZichtbaar;
-      $("locField2").style.display = locZichtbaar;
+      $("locField").style.display = ""; // adresvelden bij alle categorie\u00ebn (reiskosten-indicatie)
       const kent = $("kenteken").value.trim().toUpperCase();
       if (isQuoteFlow()) {
         const cat = CATS.find((c) => c.id === state.cat);
@@ -1031,39 +1044,31 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
     }
 
     const metTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms || 5000))]);
-    const locWaarde = () => {
-      const straat = $("locStraat").value.trim();
-      const pc = $("locPc").value.trim();
-      return [straat, pc].filter(Boolean).join(", ");
+    const adresVeld = (id) => { const el = $(id); return el ? el.value.trim() : ""; };
+    const volledigAdres = () => {
+      const regel1 = [adresVeld("locStraat"), adresVeld("locNr")].filter(Boolean).join(" ");
+      const regel2 = [adresVeld("locPc"), adresVeld("locPlaats")].filter(Boolean).join(" ");
+      return [regel1, regel2].filter(Boolean).join(", ");
     };
     async function berekenReiskosten() {
-      const adres = locWaarde();
+      const adres = volledigAdres();
       const R = CONFIG.reiskosten;
       if (!adres || !R) return "";
       const fallback = "Niet automatisch berekend \u2014 handmatig bepalen (adres: " + adres + ")";
       try {
-        let lon = null, lat = null;
-        // 1) PDOK Locatieserver (NL-overheid): begrijpt postcode+huisnummer zoals "9062GM 4"
-        try {
-          const pc = $("locPc").value.trim().replace(/\s+/g, "");
-          const nr = ($("locStraat").value.match(/\d+[a-zA-Z]?\s*$/) || [""])[0].trim();
-          const q = pc && nr ? pc + " " + nr : adres;   // postcode+huisnummer is uniek in NL
-          const pdokRes = await metTimeout(fetch("https://api.pdok.nl/bzk/locatieserver/search/v3_1/free?rows=1&fl=centroide_ll&q=" + encodeURIComponent(q)));
-          const pdok = await pdokRes.json();
-          const punt = pdok.response && pdok.response.docs && pdok.response.docs[0] && pdok.response.docs[0].centroide_ll;
-          if (punt) {
-            const m = punt.match(/POINT\(([\d.\-]+) ([\d.\-]+)\)/);
-            if (m) { lon = m[1]; lat = m[2]; }
-          }
-        } catch (e) { /* door naar reserve */ }
-        // 2) Reserve: Nominatim (OpenStreetMap)
-        if (!lon) {
-          const geoRes = await metTimeout(fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=nl&q=" + encodeURIComponent(adres)));
-          const geo = await geoRes.json();
-          if (!geo.length) return fallback;
-          lon = geo[0].lon; lat = geo[0].lat;
+        const qs = new URLSearchParams({ format: "json", limit: "1", countrycodes: "nl" });
+        const straatNr = [adresVeld("locStraat"), adresVeld("locNr")].filter(Boolean).join(" ");
+        if (straatNr) qs.set("street", straatNr);
+        if (adresVeld("locPc")) qs.set("postalcode", adresVeld("locPc"));
+        if (adresVeld("locPlaats")) qs.set("city", adresVeld("locPlaats"));
+        const geoRes = await metTimeout(fetch("https://nominatim.openstreetmap.org/search?" + qs.toString()));
+        let geo = await geoRes.json();
+        if (!geo.length) {
+          const geoRes2 = await metTimeout(fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=nl&q=" + encodeURIComponent(adres)));
+          geo = await geoRes2.json();
         }
-        const routeRes = await metTimeout(fetch("https://router.project-osrm.org/route/v1/driving/" + R.lng + "," + R.lat + ";" + lon + "," + lat + "?overview=false"));
+        if (!geo.length) return fallback;
+        const routeRes = await metTimeout(fetch("https://router.project-osrm.org/route/v1/driving/" + R.lng + "," + R.lat + ";" + geo[0].lon + "," + geo[0].lat + "?overview=false"));
         const j = await routeRes.json();
         const route = j.routes && j.routes[0];
         if (!route) return fallback;
@@ -1078,6 +1083,10 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
         alert("Vul de verplichte velden in (voornaam, e-mailadres en telefoonnummer).");
         return;
       }
+      if ($("locField").style.display !== "none" && (!adresVeld("locStraat") || !adresVeld("locNr") || !adresVeld("locPc") || !adresVeld("locPlaats"))) {
+        alert("Vul het volledige adres in (straat, huisnummer, postcode en dorp/stad).");
+        return;
+      }
       if (CONFIG.formEndpoint) {
         const btn = $("btnNext");
         btn.disabled = true;
@@ -1090,7 +1099,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
           "E-mailadres": $("em").value.trim(),
           Telefoonnummer: $("tel").value.trim(),
           Voorkeursdatum: $("wanneer").value,
-          Locatie: locWaarde(),
+          Locatie: volledigAdres(),
           Kenteken: $("kenteken").value.trim().toUpperCase(),
           Bericht: $("msg").value.trim(),
           Overzicht: overzicht,
@@ -1108,7 +1117,11 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
             email: $("em").value.trim(),
             telefoon: $("tel").value.trim(),
             voorkeursdatum: $("wanneer").value,
-            locatie: locWaarde(),
+            locatie: volledigAdres(),
+            straat: adresVeld("locStraat"),
+            huisnummer: adresVeld("locNr"),
+            postcode: adresVeld("locPc"),
+            plaats: adresVeld("locPlaats"),
             kenteken: $("kenteken").value.trim().toUpperCase(),
             bericht: $("msg").value.trim(),
             overzicht: overzicht,
