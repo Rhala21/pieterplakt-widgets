@@ -385,7 +385,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
     <p class="pp-step-sub">Het pakket geldt voor de zijruiten en achterruit. Alle pakketten zijn inclusief installatie en montage.</p>
     <div class="pp-preview">
       <svg data-pp="carSvg2" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Livebeeld tintniveau"></svg>
-      <div class="pp-hint">Livebeeld van het tintniveau van jouw pakket \u00b7 v3.9</div>
+      <div class="pp-hint">Livebeeld van het tintniveau van jouw pakket \u00b7 v4.0</div>
     </div>
     <div class="pp-grid pp-c2" data-pp="pkgGrid"></div>
   </section>
@@ -396,7 +396,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
     <p class="pp-step-sub">Selecteer de ruiten. In het livebeeld zie je direct welke ruiten getint worden.</p>
     <div class="pp-preview">
       <svg data-pp="carSvg" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Livebeeld van geselecteerde ruiten"></svg>
-      <div class="pp-hint">Livebeeld \u2014 jouw pakketkeuze bepaalt hoe donker de tint is \u00b7 v3.9</div>
+      <div class="pp-hint">Livebeeld \u2014 jouw pakketkeuze bepaalt hoe donker de tint is \u00b7 v4.0</div>
     </div>
 
     <h4 class="pp-group-title">Voorzijde</h4>
@@ -458,7 +458,8 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
             <option>Over 1 week</option><option>Over 2 weken</option><option>Over 3 weken</option><option>Later</option>
           </select>
         </div>
-        <div class="pp-field" data-pp="locField" style="display:none"><label>Locatie*</label><input data-pp="loc" placeholder="Postcode + huisnummer of adres"></div>
+        <div class="pp-field" data-pp="locField" style="display:none"><label>Straatnaam + huisnummer*</label><input data-pp="locStraat" placeholder="bijv. Staniasingel 4"></div>
+        <div class="pp-field" data-pp="locField2" style="display:none"><label>Postcode*</label><input data-pp="locPc" placeholder="bijv. 9062 GM"></div>
       </div>
       <div class="pp-field"><label>Bericht</label><textarea data-pp="msg" rows="3"></textarea></div>
       <div class="pp-summary">
@@ -933,7 +934,9 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
     });
 
     function renderSummary() {
-      $("locField").style.display = (state.cat === "machine" || state.cat === "pand") ? "" : "none";
+      const locZichtbaar = (state.cat === "machine" || state.cat === "pand") ? "" : "none";
+      $("locField").style.display = locZichtbaar;
+      $("locField2").style.display = locZichtbaar;
       const kent = $("kenteken").value.trim().toUpperCase();
       if (isQuoteFlow()) {
         const cat = CATS.find((c) => c.id === state.cat);
@@ -1028,8 +1031,13 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
     }
 
     const metTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms || 5000))]);
+    const locWaarde = () => {
+      const straat = $("locStraat").value.trim();
+      const pc = $("locPc").value.trim();
+      return [straat, pc].filter(Boolean).join(", ");
+    };
     async function berekenReiskosten() {
-      const adres = $("loc").value.trim();
+      const adres = locWaarde();
       const R = CONFIG.reiskosten;
       if (!adres || !R) return "";
       const fallback = "Niet automatisch berekend \u2014 handmatig bepalen (adres: " + adres + ")";
@@ -1037,7 +1045,10 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
         let lon = null, lat = null;
         // 1) PDOK Locatieserver (NL-overheid): begrijpt postcode+huisnummer zoals "9062GM 4"
         try {
-          const pdokRes = await metTimeout(fetch("https://api.pdok.nl/bzk/locatieserver/search/v3_1/free?rows=1&fl=centroide_ll&q=" + encodeURIComponent(adres)));
+          const pc = $("locPc").value.trim().replace(/\s+/g, "");
+          const nr = ($("locStraat").value.match(/\d+[a-zA-Z]?\s*$/) || [""])[0].trim();
+          const q = pc && nr ? pc + " " + nr : adres;   // postcode+huisnummer is uniek in NL
+          const pdokRes = await metTimeout(fetch("https://api.pdok.nl/bzk/locatieserver/search/v3_1/free?rows=1&fl=centroide_ll&q=" + encodeURIComponent(q)));
           const pdok = await pdokRes.json();
           const punt = pdok.response && pdok.response.docs && pdok.response.docs[0] && pdok.response.docs[0].centroide_ll;
           if (punt) {
@@ -1079,7 +1090,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
           "E-mailadres": $("em").value.trim(),
           Telefoonnummer: $("tel").value.trim(),
           Voorkeursdatum: $("wanneer").value,
-          Locatie: $("loc").value.trim(),
+          Locatie: locWaarde(),
           Kenteken: $("kenteken").value.trim().toUpperCase(),
           Bericht: $("msg").value.trim(),
           Overzicht: overzicht,
@@ -1097,7 +1108,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
             email: $("em").value.trim(),
             telefoon: $("tel").value.trim(),
             voorkeursdatum: $("wanneer").value,
-            locatie: $("loc").value.trim(),
+            locatie: locWaarde(),
             kenteken: $("kenteken").value.trim().toUpperCase(),
             bericht: $("msg").value.trim(),
             overzicht: overzicht,
