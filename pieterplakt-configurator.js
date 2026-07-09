@@ -24,6 +24,12 @@
     email: "info@pieterplakt.nl",
     plaats: "Burgum",
     vanafPrijs: 175,               // getoond als "vanaf \u20ac 175" totdat een carrosserietype is gekozen
+    m2AfrondenOp: 0.1,
+    reiskosten: {                  // automatische reiskosten-indicatie in de bedrijfsmail
+      lat: 53.1922, lng: 5.9905,   // vertrekpunt (Burgum) \u2014 pas gerust aan naar exact bedrijfsadres
+      kmPrijs: 0.35,               // \u20ac per km
+      uurtarief: 75,               // \u20ac per uur reistijd, excl. btw
+    },             // glasoppervlak per raam naar boven afronden op deze stap (0.1 = per 0,1 m\u00b2; 1 = hele m\u00b2)
     disclaimer: "Aan de getoonde prijzen kunnen geen rechten worden ontleend. Prijzen onder voorbehoud van fouten en wijzigingen.",
     // PROFESSIONELE MAILKOPPELING (aanbevolen): plak hier de webhook-URL uit Make.com
     // (zie make-setup-instructies.md). Mails gaan dan echt vanaf info@pieterplakt.nl.
@@ -283,6 +289,22 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
 .pp-toggle ul{margin:6px 0 0;padding-left:16px;font-size:13px;color:var(--pp-text-body);list-style:disc}
 .pp-toggle ul li{margin-bottom:2px}
 
+.pp-icon svg{display:block;width:38px;height:38px}
+.pp-raam{display:flex;align-items:center;gap:8px;background:var(--pp-white);border:1.5px solid var(--pp-grey);
+  border-radius:14px;padding:10px 12px;margin-bottom:8px;flex-wrap:wrap}
+.pp-raam .pp-raam-nr{font-weight:600;font-size:13px;white-space:nowrap;min-width:58px}
+.pp-raam input{background:var(--pp-main-grey);border:1.5px solid var(--pp-grey);border-radius:10px;
+  padding:8px 10px;font-family:inherit;font-size:13px;color:var(--pp-black)}
+.pp-raam input:focus{outline:none;border-color:var(--pp-yellow)}
+.pp-raam .pp-ref{flex:1;min-width:150px}
+.pp-raam .pp-dim{width:72px;text-align:center}
+.pp-raam .pp-m2{font-size:13px;color:var(--pp-text-body);white-space:nowrap;min-width:78px}
+.pp-raam .pp-x{border:0;background:none;color:var(--pp-text-body);font-size:16px;cursor:pointer;padding:2px 6px}
+.pp-raam .pp-x:hover{color:var(--pp-black)}
+.pp-x-floor{border:0;background:none;color:var(--pp-text-body);font-size:16px;cursor:pointer;padding:2px 7px;vertical-align:1px}
+.pp-x-floor:hover{color:var(--pp-black)}
+.pp-btn.pp-mini{padding:9px 18px;font-size:13px;background:var(--pp-white);color:var(--pp-black);border-color:var(--pp-grey);margin-top:2px}
+.pp-btn.pp-mini:hover{border-color:var(--pp-yellow);opacity:1}
 .pp-bar{position:sticky;bottom:0;z-index:20;margin:26px -20px 0;
   background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border-top:1px solid var(--pp-grey);
   border-radius:0 0 var(--pp-radius) var(--pp-radius)}
@@ -363,7 +385,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
     <p class="pp-step-sub">Het pakket geldt voor de zijruiten en achterruit. Alle pakketten zijn inclusief installatie en montage.</p>
     <div class="pp-preview">
       <svg data-pp="carSvg2" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Livebeeld tintniveau"></svg>
-      <div class="pp-hint">Livebeeld van het tintniveau van jouw pakket \u00b7 v3.4</div>
+      <div class="pp-hint">Livebeeld van het tintniveau van jouw pakket \u00b7 v3.9</div>
     </div>
     <div class="pp-grid pp-c2" data-pp="pkgGrid"></div>
   </section>
@@ -374,7 +396,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
     <p class="pp-step-sub">Selecteer de ruiten. In het livebeeld zie je direct welke ruiten getint worden.</p>
     <div class="pp-preview">
       <svg data-pp="carSvg" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Livebeeld van geselecteerde ruiten"></svg>
-      <div class="pp-hint">Livebeeld \u2014 jouw pakketkeuze bepaalt hoe donker de tint is \u00b7 v3.4</div>
+      <div class="pp-hint">Livebeeld \u2014 jouw pakketkeuze bepaalt hoe donker de tint is \u00b7 v3.9</div>
     </div>
 
     <h4 class="pp-group-title">Voorzijde</h4>
@@ -401,6 +423,25 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
     </label>
   </section>
 
+  <section class="pp-panel" data-pp="p6">
+    <div class="pp-step-label">Stap 2 van 4</div>
+    <h3 class="pp-step-title">Waar gaat het om?</h3>
+    <p class="pp-step-sub">Kies het type pand en de folie die je zoekt.</p>
+    <h4 class="pp-group-title">Type pand</h4>
+    <div class="pp-grid pp-c2" data-pp="pandGrid" style="margin-bottom:8px"></div>
+    <h4 class="pp-group-title">Soort folie</h4>
+    <div class="pp-grid pp-c4" data-pp="folieGrid"></div>
+  </section>
+
+  <section class="pp-panel" data-pp="p7">
+    <div class="pp-step-label">Stap 3 van 4</div>
+    <h3 class="pp-step-title">Jouw ramen</h3>
+    <p class="pp-step-sub">Vul per verdieping de ramen in \u2014 <strong>maten in centimeters</strong>. Een referentie helpt ons (bijvoorbeeld "raam naast de voordeur").</p>
+    <div data-pp="floors"></div>
+    <button type="button" class="pp-btn pp-mini" data-pp="addFloor">+ Verdieping toevoegen</button>
+    <p class="pp-note" style="margin-top:16px">Totaal glasoppervlak: <strong data-pp="m2Totaal">0 m\u00b2</strong></p>
+  </section>
+
   <section class="pp-panel" data-pp="p5">
     <div class="pp-step-label" data-pp="p5Label">Bijna klaar</div>
     <h3 class="pp-step-title">Mooi, wat leuk dat je met ons kennis wilt maken.</h3>
@@ -417,7 +458,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
             <option>Over 1 week</option><option>Over 2 weken</option><option>Over 3 weken</option><option>Later</option>
           </select>
         </div>
-        <div class="pp-field" data-pp="locField" style="display:none"><label>Locatie*</label><input data-pp="loc"></div>
+        <div class="pp-field" data-pp="locField" style="display:none"><label>Locatie*</label><input data-pp="loc" placeholder="Postcode + huisnummer of adres"></div>
       </div>
       <div class="pp-field"><label>Bericht</label><textarea data-pp="msg" rows="3"></textarea></div>
       <div class="pp-summary">
@@ -472,6 +513,10 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
       voorzijde: null,                                         // null | "ceramisch" | "chameleon"
       rdw: null, modelToeslag: null,
       removeFoil: false, pkg: "XR", zonneband: false,          // Pakket XR standaard
+      pand: { type: null, folie: null, floors: [
+        { naam: "Begane grond", ramen: [{ ref: "", b: "", h: "" }] },
+        { naam: "Eerste verdieping", ramen: [{ ref: "", b: "", h: "" }] },
+      ] },
     };
     const euro = (n) => "\u20ac " + n.toLocaleString("nl-NL");
     const prijzen = () => PRIJZEN[state.body] || PRIJZEN.sedan;
@@ -481,6 +526,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
     function cardHTML(o) {
       return `<div class="pp-card" role="button" tabindex="0" data-id="${o.id}">
         <div class="pp-check"></div>
+        ${o.icon ? `<div class="pp-icon">${o.icon}</div>` : ""}
         <div class="pp-name">${o.name}</div>
         ${o.tag ? `<div class="pp-tag">${o.tag} \u00b7 inclusief installatie</div>` : `<div class="pp-tag">Inclusief installatie</div>`}
         ${o.badge ? `<div class="pp-badge">${o.badge}</div>` : ""}
@@ -735,7 +781,9 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
       return { rows, total };
     }
 
-    const TOTAL_STEPS = 5;
+    const TOTAL_STEPS = 7;
+    const stappen = () => (!state.cat || state.cat === "auto") ? [1, 2, 3, 4, 5]
+      : state.cat === "pand" ? [1, 6, 7, 5] : [1, 5];
     function stepValid() {
       switch (state.step) {
         case 1: return !!state.cat;
@@ -743,34 +791,167 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
         case 3: return !!state.pkg;
         case 4: return state.windows.size > 0 || !!state.voorzijde;
         case 5: return true;
+        case 6: return !!(state.pand.type && state.pand.folie);
+        case 7: return raamRegels().length > 0;
       }
     }
     function goto(step) {
       state.step = step;
       for (let i = 1; i <= TOTAL_STEPS; i++) $("p" + i).classList.toggle("pp-visible", i === step);
       if (step === 4) { renderWindows(); state.view = "side"; drawView($("carSvg"), "side"); }
+      if (step === 6) renderPand();
+      if (step === 7) renderFloors();
       if (step === 5) renderSummary();
       paintCar();
       update();
       root.scrollIntoView({ behavior: "smooth", block: "start" });
     }
     function next() {
-      if (state.step === 1 && isQuoteFlow()) { goto(5); return; }
       if (state.step === 5) { submit(); return; }
-      goto(state.step + 1);
+      const seq = stappen();
+      const i = seq.indexOf(state.step);
+      if (i >= 0 && i < seq.length - 1) goto(seq[i + 1]);
     }
     function prev() {
-      if (state.step === 5 && isQuoteFlow()) { goto(1); return; }
-      if (state.step > 1) goto(state.step - 1);
+      const seq = stappen();
+      const i = seq.indexOf(state.step);
+      if (i > 0) goto(seq[i - 1]);
     }
     $("btnNext").addEventListener("click", next);
     $("btnPrev").addEventListener("click", prev);
+
+    const PAND_TYPES = [
+      { id: "woning", name: "Woning", tag: "Priv\u00e9woning of appartement",
+        icon: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 22 24 8l16 14"/><path d="M12 20v20h24V20"/><path d="M20 40V28h8v12"/></svg>' },
+      { id: "bedrijf", name: "Bedrijfspand", tag: "Kantoor, winkel of bedrijfsruimte",
+        icon: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 40V10h20v30"/><path d="M30 18h8v22"/><path d="M6 40h36"/><path d="M15 16h4M21 16h4M15 22h4M21 22h4M15 28h4M21 28h4M34 24h0M34 30h0"/></svg>' },
+    ];
+    const FOLIES = [
+      { id: "zonwerend",  name: "Zonwerende folie",  tag: "Weert warmte \u00b7 behoudt uitzicht" },
+      { id: "privacy",    name: "Privacy folie",     tag: "Beperkt inkijk \u00b7 licht blijft binnenkomen" },
+      { id: "decoratief", name: "Decoratieve folie", tag: "Matglas, patronen of kleur" },
+      { id: "veiligheid", name: "Veiligheidsfolie",  tag: "Splintervrij \u00b7 inbraakvertragend" },
+    ];
+    function renderPand() {
+      if (!$("pandGrid").dataset.drawn) {
+        $("pandGrid").innerHTML = PAND_TYPES.map(cardHTML).join("");
+        bindCards($("pandGrid"), (id) => { state.pand.type = id; selectOne($("pandGrid"), id); update(); });
+        $("folieGrid").innerHTML = FOLIES.map(cardHTML).join("");
+        bindCards($("folieGrid"), (id) => { state.pand.folie = id; selectOne($("folieGrid"), id); update(); });
+        $("pandGrid").dataset.drawn = "1";
+      }
+      selectOne($("pandGrid"), state.pand.type);
+      selectOne($("folieGrid"), state.pand.folie);
+    }
+    const getal = (v) => {
+      const n = parseFloat(String(v).replace(",", "."));
+      return isFinite(n) && n > 0 ? n : 0;
+    };
+    const m2str = (n) => n.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const cmstr = (n) => n.toLocaleString("nl-NL", { maximumFractionDigits: 1 });
+    const raamM2 = (b, h) => {
+      const stap = CONFIG.m2AfrondenOp || 0.01;
+      return Math.ceil((b * h) / 10000 / stap - 1e-9) * stap;   // cm \u00d7 cm \u2192 m\u00b2, naar boven
+    };
+    function raamRegels() {
+      const uit = [];
+      state.pand.floors.forEach((fl) => {
+        fl.ramen.forEach((r, i) => {
+          const b = getal(r.b), h = getal(r.h);
+          if (b && h) uit.push({
+            label: fl.naam + " \u2014 Raam " + (i + 1) + (r.ref.trim() ? " (" + r.ref.trim() + ")" : ""),
+            maat: cmstr(b) + " \u00d7 " + cmstr(h) + " cm = " + m2str(raamM2(b, h)) + " m\u00b2",
+            m2: raamM2(b, h),
+          });
+        });
+      });
+      return uit;
+    }
+    const VERDIEPINGEN = ["Begane grond", "Eerste verdieping", "Tweede verdieping", "Derde verdieping", "Vierde verdieping", "Vijfde verdieping"];
+    function hernoemVerdiepingen() {
+      state.pand.floors.forEach((fl, i) => { fl.naam = VERDIEPINGEN[i] || (i + "e verdieping"); });
+    }
+    function m2Update() {
+      const tot = raamRegels().reduce((a, r) => a + r.m2, 0);
+      $("m2Totaal").textContent = m2str(tot) + " m\u00b2";
+    }
+    function renderFloors() {
+      renderPand();
+      const box = $("floors");
+      box.innerHTML = state.pand.floors.map((fl, fi) => `
+        <h4 class="pp-group-title">${fl.naam}${fi > 0 ? ` <button type="button" class="pp-x-floor" data-delfloor="${fi}" title="Verdieping verwijderen">\u00d7</button>` : ""}</h4>
+        ${fl.ramen.map((r, ri) => `
+          <div class="pp-raam" data-f="${fi}" data-r="${ri}">
+            <span class="pp-raam-nr">Raam ${ri + 1}</span>
+            <input class="pp-ref" placeholder="Referentie (bijv. raam naast de voordeur)" value="${r.ref.replace(/"/g, "&quot;")}">
+            <input class="pp-dim" inputmode="decimal" placeholder="breedte (cm)" aria-label="breedte in centimeters" value="${r.b}">
+            <span>\u00d7</span>
+            <input class="pp-dim" inputmode="decimal" placeholder="hoogte (cm)" aria-label="hoogte in centimeters" value="${r.h}">
+            <span class="pp-m2">= ${m2str(raamM2(getal(r.b), getal(r.h)))} m\u00b2</span>
+            <button type="button" class="pp-x" title="Raam verwijderen">\u00d7</button>
+          </div>`).join("")}
+        <button type="button" class="pp-btn pp-mini" data-f="${fi}" data-add="1">+ Raam toevoegen</button>
+      `).join("");
+      box.querySelectorAll(".pp-raam").forEach((row) => {
+        const r = state.pand.floors[+row.dataset.f].ramen[+row.dataset.r];
+        const [ref, b, h] = row.querySelectorAll("input");
+        const m2 = row.querySelector(".pp-m2");
+        ref.addEventListener("input", () => { r.ref = ref.value; });
+        const dim = () => {
+          r.b = b.value; r.h = h.value;
+          m2.textContent = "= " + m2str(raamM2(getal(r.b), getal(r.h))) + " m\u00b2";
+          m2Update(); update();
+        };
+        b.addEventListener("input", dim);
+        h.addEventListener("input", dim);
+        row.querySelector(".pp-x").addEventListener("click", () => {
+          const fl = state.pand.floors[+row.dataset.f];
+          fl.ramen.splice(+row.dataset.r, 1);
+          if (!fl.ramen.length) fl.ramen.push({ ref: "", b: "", h: "" });
+          renderFloors(); update();
+        });
+      });
+      box.querySelectorAll("[data-delfloor]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          state.pand.floors.splice(+btn.dataset.delfloor, 1);
+          hernoemVerdiepingen();
+          renderFloors(); update();
+        });
+      });
+      box.querySelectorAll("[data-add]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          state.pand.floors[+btn.dataset.f].ramen.push({ ref: "", b: "", h: "" });
+          renderFloors(); update();
+        });
+      });
+      m2Update();
+    }
+    $("addFloor").addEventListener("click", () => {
+      state.pand.floors.push({ naam: "", ramen: [{ ref: "", b: "", h: "" }] });
+      hernoemVerdiepingen();
+      renderFloors(); update();
+    });
 
     function renderSummary() {
       $("locField").style.display = (state.cat === "machine" || state.cat === "pand") ? "" : "none";
       const kent = $("kenteken").value.trim().toUpperCase();
       if (isQuoteFlow()) {
         const cat = CATS.find((c) => c.id === state.cat);
+        if (state.cat === "pand") {
+          const type = PAND_TYPES.find((t) => t.id === state.pand.type);
+          const folie = FOLIES.find((f) => f.id === state.pand.folie);
+          const regels = raamRegels();
+          const tot = regels.reduce((a, r) => a + r.m2, 0);
+          $("summaryBox").innerHTML = `
+            <h3>Jouw aanvraag</h3>
+            <div class="pp-row"><span>Type pand</span><span>${type ? type.name : ""}</span></div>
+            <div class="pp-row"><span>Soort folie</span><span>${folie ? folie.name : ""}</span></div>
+            ${regels.map((r) => `<div class="pp-row"><span>${r.label}</span><span class="pp-r-price">${r.maat}</span></div>`).join("")}
+            <div class="pp-row"><span>Totaal glasoppervlak</span><span class="pp-r-price">${m2str(tot)} m\u00b2</span></div>
+            <div class="pp-row pp-total-row"><span>Prijs</span><span class="pp-r-price">Op aanvraag</span></div>
+            <p class="pp-note">Hiervoor gelden maatwerkprijzen. Maak je aanvraag af en we stellen een offerte op.</p>`;
+          return;
+        }
         $("summaryBox").innerHTML = `
           <h3>Jouw aanvraag</h3>
           <div class="pp-row"><span>Categorie</span><span>${cat.name}</span></div>
@@ -795,6 +976,15 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
       const kent = $("kenteken").value.trim().toUpperCase();
       if (isQuoteFlow()) {
         const cat = CATS.find((c) => c.id === state.cat);
+        if (state.cat === "pand") {
+          const type = PAND_TYPES.find((t) => t.id === state.pand.type);
+          const folie = FOLIES.find((f) => f.id === state.pand.folie);
+          const regels = raamRegels();
+          const tot = regels.reduce((a, r) => a + r.m2, 0);
+          return "Type pand: " + (type ? type.name : "") + "\nSoort folie: " + (folie ? folie.name : "") + "\n" +
+            regels.map((r) => r.label + ": " + r.maat).join("\n") +
+            "\nTotaal glasoppervlak: " + m2str(tot) + " m\u00b2\nPrijs: op aanvraag (offerte volgt)";
+        }
         return "Categorie: " + cat.name + "\nPrijs: op aanvraag (offerte volgt)";
       }
       const { rows, total } = calc();
@@ -811,6 +1001,19 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
       const rij = (n, p) => '<tr><td style="padding:8px 0;border-bottom:1px dashed #e3e7f1;color:#555;font-size:14px">' + n + '</td><td style="padding:8px 0;border-bottom:1px dashed #e3e7f1;text-align:right;font-weight:600;font-size:14px;white-space:nowrap">' + p + "</td></tr>";
       if (isQuoteFlow()) {
         const cat = CATS.find((c) => c.id === state.cat);
+        if (state.cat === "pand") {
+          const type = PAND_TYPES.find((t) => t.id === state.pand.type);
+          const folie = FOLIES.find((f) => f.id === state.pand.folie);
+          const regels = raamRegels();
+          const tot = regels.reduce((a, r) => a + r.m2, 0);
+          let h = '<table width="100%" cellpadding="0" cellspacing="0">';
+          h += rij("Type pand", type ? type.name : "");
+          h += rij("Soort folie", folie ? folie.name : "");
+          regels.forEach((r) => { h += rij(r.label, r.maat); });
+          h += rij("Totaal glasoppervlak", m2str(tot) + " m\u00b2");
+          h += rij("Prijs", "Op aanvraag");
+          return h + "</table>";
+        }
         return '<table width="100%" cellpadding="0" cellspacing="0">' + rij("Categorie", cat.name) + rij("Prijs", "Op aanvraag") + "</table>";
       }
       const { rows, total } = calc();
@@ -824,6 +1027,41 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
       return h;
     }
 
+    const metTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms || 5000))]);
+    async function berekenReiskosten() {
+      const adres = $("loc").value.trim();
+      const R = CONFIG.reiskosten;
+      if (!adres || !R) return "";
+      const fallback = "Niet automatisch berekend \u2014 handmatig bepalen (adres: " + adres + ")";
+      try {
+        let lon = null, lat = null;
+        // 1) PDOK Locatieserver (NL-overheid): begrijpt postcode+huisnummer zoals "9062GM 4"
+        try {
+          const pdokRes = await metTimeout(fetch("https://api.pdok.nl/bzk/locatieserver/search/v3_1/free?rows=1&fl=centroide_ll&q=" + encodeURIComponent(adres)));
+          const pdok = await pdokRes.json();
+          const punt = pdok.response && pdok.response.docs && pdok.response.docs[0] && pdok.response.docs[0].centroide_ll;
+          if (punt) {
+            const m = punt.match(/POINT\(([\d.\-]+) ([\d.\-]+)\)/);
+            if (m) { lon = m[1]; lat = m[2]; }
+          }
+        } catch (e) { /* door naar reserve */ }
+        // 2) Reserve: Nominatim (OpenStreetMap)
+        if (!lon) {
+          const geoRes = await metTimeout(fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=nl&q=" + encodeURIComponent(adres)));
+          const geo = await geoRes.json();
+          if (!geo.length) return fallback;
+          lon = geo[0].lon; lat = geo[0].lat;
+        }
+        const routeRes = await metTimeout(fetch("https://router.project-osrm.org/route/v1/driving/" + R.lng + "," + R.lat + ";" + lon + "," + lat + "?overview=false"));
+        const j = await routeRes.json();
+        const route = j.routes && j.routes[0];
+        if (!route) return fallback;
+        const km = (route.distance / 1000) * 2;                       // heen + terug
+        const uren = (route.duration / 3600) * 2;
+        const bedrag = Math.ceil(km * R.kmPrijs + uren * R.uurtarief); // naar boven afgerond
+        return Math.ceil(km) + " km (heen+terug) \u00b7 \u00b1" + (Math.ceil(uren * 10) / 10).toLocaleString("nl-NL") + " uur reistijd \u2192 \u20ac " + bedrag + " excl. btw";
+      } catch (e) { return fallback; }
+    }
     async function submit() {
       if (!$("fn").value.trim() || !$("em").value.trim() || !$("tel").value.trim()) {
         alert("Vul de verplichte velden in (voornaam, e-mailadres en telefoonnummer).");
@@ -834,6 +1072,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
         btn.disabled = true;
         btn.textContent = "Versturen\u2026";
         const overzicht = bouwOverzicht();
+        const reiskosten = await berekenReiskosten();
         const payload = {
           Voornaam: $("fn").value.trim(),
           Achternaam: $("ln").value.trim(),
@@ -844,6 +1083,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
           Kenteken: $("kenteken").value.trim().toUpperCase(),
           Bericht: $("msg").value.trim(),
           Overzicht: overzicht,
+          Reiskosten: reiskosten,
           _subject: "Nieuwe aanvraag ramen blinderen \u2014 " + $("fn").value.trim() + " " + $("ln").value.trim(),
           _replyto: $("em").value.trim(),
           _template: "table",
@@ -862,6 +1102,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
             bericht: $("msg").value.trim(),
             overzicht: overzicht,
             overzichtHtml: bouwOverzichtHtml(),
+            reiskosten: reiskosten,
             onderwerp: "Nieuwe aanvraag ramen blinderen \u2014 " + $("fn").value.trim() + " " + $("ln").value.trim(),
           };
           let frame = document.getElementById("pp-mailframe");
@@ -928,9 +1169,11 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
     function update() {
       const bar = $("stepBar");
       bar.innerHTML = "";
-      for (let i = 1; i <= TOTAL_STEPS; i++) {
+      const seq = stappen();
+      const pos = Math.max(0, seq.indexOf(state.step));
+      for (let i = 0; i < seq.length; i++) {
         const d = document.createElement("div");
-        d.className = "pp-s" + (i < state.step ? " pp-done" : i === state.step ? " pp-active" : "");
+        d.className = "pp-s" + (i < pos ? " pp-done" : i === pos ? " pp-active" : "");
         bar.appendChild(d);
       }
       const { total } = calc();
@@ -940,7 +1183,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
       $("btnPrev").disabled = state.step === 1;
       $("btnNext").disabled = !stepValid();
       $("btnNext").textContent = state.step === 5 ? "Aanvraag versturen" :
-        (state.step === 1 && isQuoteFlow()) ? "Offerte aanvragen" : "Volgende stap";
+        (state.step === 1 && isQuoteFlow() && state.cat !== "pand") ? "Offerte aanvragen" : "Volgende stap";
       paintCar();
     }
 
