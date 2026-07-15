@@ -30,6 +30,12 @@
       kmPrijs: 0.35,               // \u20ac per km
       uurtarief: 75,               // \u20ac per uur reistijd, excl. btw
     },             // glasoppervlak per raam naar boven afronden op deze stap (0.1 = per 0,1 m\u00b2; 1 = hele m\u00b2)
+    agenda: {                      // eerst mogelijke datum voor het voorkeursdatum-veld
+      // Make-webhook die {"eersteDatum":"JJJJ-MM-DD"} teruggeeft op basis van jullie
+      // Google Agenda (zie make-setup-instructies.md, scenario 2). Leeg = alleen terugvaloptie.
+      beschikbaarheidUrl: "",
+      minDagenVooruit: 3,          // terugvaloptie: eerst mogelijke datum = vandaag + dit aantal dagen
+    },
     disclaimer: "Aan de getoonde prijzen kunnen geen rechten worden ontleend. Prijzen onder voorbehoud van fouten en wijzigingen.",
     // PROFESSIONELE MAILKOPPELING (aanbevolen): plak hier de webhook-URL uit Make.com
     // (zie make-setup-instructies.md). Mails gaan dan echt vanaf info@pieterplakt.nl.
@@ -37,6 +43,17 @@
     webhookUrl: "https://hook.eu1.make.com/l3k3ofbyejfu2ov33k4gz87npymd3ns9",
     // Terugvaloptie (FormSubmit, gratis maar met FormSubmit-opmaak):
     formEndpoint: "https://formsubmit.co/info@pieterplakt.nl",
+  };
+
+  /* ----------------------------------------------------------------
+     BEDRIJFSRECLAME \u2014 indicatieve vanaf-prijzen
+     LET OP: dit zijn PLACEHOLDERS \u2014 vervang door echte bedragen!
+     Getoond als "indicatie vanaf \u20ac \u2026"; rijen = voertuig, kolommen = pakket.
+     ---------------------------------------------------------------- */
+  const RECLAME_PRIJZEN = {
+    auto:    { belettering: 250, half: 950,  vol: 1950 },
+    werkbus: { belettering: 300, half: 1250, vol: 2450 },
+    vracht:  { belettering: 450, half: 1950, vol: 3950 },
   };
 
   /* ----------------------------------------------------------------
@@ -120,6 +137,7 @@
     { id: "bus",     name: "Werkbussen",              tag: "Offerte aanvragen",  items: ["Blindering van ramen", "Warmtewerend folie", "Verschillende tintpercentages"] },
     { id: "machine", name: "Machines & Vrachtwagens", tag: "Offerte aanvragen",  items: ["Blindering van ramen", "Warmtewerend folie", "Op locatie"] },
     { id: "pand",    name: "Woning & Bedrijfspand",   tag: "Offerte aanvragen",  items: ["Blindering van ramen", "Warmtewerend folie", "Op locatie"] },
+    { id: "reclame", name: "Bedrijfsreclame",         tag: "Prijsindicatie",     items: ["Standaard belettering", "Halve wrap", "Volledige wrap"] },
   ];
 
   const BODIES = [
@@ -226,6 +244,7 @@
 
 .pp-grid{display:grid;gap:14px}
 .pp-grid.pp-c2{grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}
+.pp-grid.pp-c3{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
 .pp-grid.pp-c4{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
 
 .pp-card{background:var(--pp-white);border:1.5px solid var(--pp-grey);border-radius:var(--pp-radius);
@@ -277,6 +296,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
 .pp-field input,.pp-field select,.pp-field textarea{width:100%;background:var(--pp-white);border:1.5px solid var(--pp-grey);
   color:var(--pp-black);border-radius:14px;padding:12px 14px;font-family:inherit;font-size:14px}
 .pp-field input:focus,.pp-field select:focus,.pp-field textarea:focus{outline:none;border-color:var(--pp-yellow);box-shadow:0 0 0 3px var(--pp-yellow-soft)}
+.pp-field-hint{font-size:12px;color:var(--pp-text-body);margin-top:5px;min-height:1em}
 .pp-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
 @media(max-width:560px){.pp-form-grid{grid-template-columns:1fr}}
 
@@ -387,7 +407,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
     <p class="pp-step-sub">Het pakket geldt voor de zijruiten en achterruit. Alle pakketten zijn inclusief installatie en montage.</p>
     <div class="pp-preview">
       <svg data-pp="carSvg2" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Livebeeld tintniveau"></svg>
-      <div class="pp-hint">Livebeeld van het tintniveau van jouw pakket \u00b7 v3.9</div>
+      <div class="pp-hint">Livebeeld van het tintniveau van jouw pakket \u00b7 v3.11</div>
     </div>
     <div class="pp-grid pp-c2" data-pp="pkgGrid"></div>
   </section>
@@ -398,7 +418,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
     <p class="pp-step-sub">Selecteer de ruiten. In het livebeeld zie je direct welke ruiten getint worden.</p>
     <div class="pp-preview">
       <svg data-pp="carSvg" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Livebeeld van geselecteerde ruiten"></svg>
-      <div class="pp-hint">Livebeeld \u2014 jouw pakketkeuze bepaalt hoe donker de tint is \u00b7 v3.9</div>
+      <div class="pp-hint">Livebeeld \u2014 jouw pakketkeuze bepaalt hoe donker de tint is \u00b7 v3.11</div>
     </div>
 
     <h4 class="pp-group-title">Voorzijde</h4>
@@ -444,6 +464,17 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
     <p class="pp-note" style="margin-top:16px">Totaal glasoppervlak: <strong data-pp="m2Totaal">0 m\u00b2</strong></p>
   </section>
 
+  <section class="pp-panel" data-pp="p8">
+    <div class="pp-step-label">Stap 2 van 3</div>
+    <h3 class="pp-step-title">Waar komt de reclame op?</h3>
+    <p class="pp-step-sub">Kies het voertuig en het gewenste pakket voor een prijsindicatie.</p>
+    <h4 class="pp-group-title">Voertuig</h4>
+    <div class="pp-grid pp-c3" data-pp="recVoertuigGrid" style="margin-bottom:8px"></div>
+    <h4 class="pp-group-title">Pakket</h4>
+    <div class="pp-grid pp-c3" data-pp="recPakketGrid"></div>
+    <p class="pp-note" data-pp="recIndicatie" style="margin-top:14px"></p>
+  </section>
+
   <section class="pp-panel" data-pp="p5">
     <div class="pp-step-label" data-pp="p5Label">Bijna klaar</div>
     <h3 class="pp-step-title">Mooi, wat leuk dat je met ons kennis wilt maken.</h3>
@@ -456,8 +487,18 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
         <div class="pp-field"><label>Telefoonnummer*</label><input data-pp="tel" type="tel" required></div>
         <div class="pp-field">
           <label>Voorkeursdatum (op basis van beschikbaarheid)</label>
-          <select data-pp="wanneer">
-            <option>Over 1 week</option><option>Over 2 weken</option><option>Over 3 weken</option><option>Later</option>
+          <input data-pp="wanneer" type="date">
+          <div class="pp-field-hint" data-pp="wanneerHint"></div>
+        </div>
+        <div class="pp-field">
+          <label>Hoe ben je bij ons terechtgekomen?</label>
+          <select data-pp="herkomst">
+            <option value="">Maak een keuze (optioneel)</option>
+            <option>Google</option>
+            <option>Social media</option>
+            <option>Via via / aanbeveling</option>
+            <option>Eerder klant geweest</option>
+            <option>Anders</option>
           </select>
         </div>
         <div data-pp="locField" style="display:none;grid-column:1/-1">
@@ -526,6 +567,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
         { naam: "Begane grond", ramen: [{ ref: "", b: "", h: "" }] },
         { naam: "Eerste verdieping", ramen: [{ ref: "", b: "", h: "" }] },
       ] },
+      reclame: { voertuig: null, pakket: null },
     };
     const euro = (n) => "\u20ac " + n.toLocaleString("nl-NL");
     const prijzen = () => PRIJZEN[state.body] || PRIJZEN.sedan;
@@ -537,7 +579,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
         <div class="pp-check"></div>
         ${o.icon ? `<div class="pp-icon">${o.icon}</div>` : ""}
         <div class="pp-name">${o.name}</div>
-        ${o.tag ? `<div class="pp-tag">${o.tag} \u00b7 inclusief installatie</div>` : `<div class="pp-tag">Inclusief installatie</div>`}
+        ${o.tag ? `<div class="pp-tag">${o.tag}${o.noInstall ? "" : " \u00b7 inclusief installatie"}</div>` : `<div class="pp-tag">${o.noInstall ? "" : "Inclusief installatie"}</div>`}
         ${o.badge ? `<div class="pp-badge">${o.badge}</div>` : ""}
         ${o.price != null ? `<div class="pp-price">${o.price}</div>` : ""}
         ${o.items ? `<ul>${o.items.map((i) => `<li>${i}</li>`).join("")}</ul>` : ""}
@@ -790,9 +832,9 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
       return { rows, total };
     }
 
-    const TOTAL_STEPS = 7;
+    const TOTAL_STEPS = 8;
     const stappen = () => (!state.cat || state.cat === "auto") ? [1, 2, 3, 4, 5]
-      : state.cat === "pand" ? [1, 6, 7, 5] : [1, 5];
+      : state.cat === "pand" ? [1, 6, 7, 5] : state.cat === "reclame" ? [1, 8, 5] : [1, 5];
     function stepValid() {
       switch (state.step) {
         case 1: return !!state.cat;
@@ -802,6 +844,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
         case 5: return true;
         case 6: return !!(state.pand.type && state.pand.folie);
         case 7: return raamRegels().length > 0;
+        case 8: return !!(state.reclame.voertuig && state.reclame.pakket);
       }
     }
     function goto(step) {
@@ -810,6 +853,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
       if (step === 4) { renderWindows(); state.view = "side"; drawView($("carSvg"), "side"); }
       if (step === 6) renderPand();
       if (step === 7) renderFloors();
+      if (step === 8) renderReclame();
       if (step === 5) renderSummary();
       paintCar();
       update();
@@ -851,6 +895,61 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
       }
       selectOne($("pandGrid"), state.pand.type);
       selectOne($("folieGrid"), state.pand.folie);
+    }
+
+    /* -------- bedrijfsreclame (indicatieflow) -------- */
+    const RECLAME_VOERTUIGEN = [
+      { id: "auto",    name: "Personenauto", tag: "Auto of stationwagen", noInstall: true,
+        icon: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 30l3.2-8.2A4 4 0 0 1 16.9 19h14.2a4 4 0 0 1 3.7 2.8L38 30"/><path d="M7 30h34a2 2 0 0 1 2 2v4h-6M7 30a2 2 0 0 0-2 2v4h6"/><circle cx="15" cy="37" r="3.5"/><circle cx="33" cy="37" r="3.5"/><path d="M18.5 37h11"/></svg>' },
+      { id: "werkbus", name: "Werkbus", tag: "Bestelbus of bedrijfswagen", noInstall: true,
+        icon: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 15h25l13 10v9H5z"/><path d="M30 15v9h13"/><circle cx="14" cy="37" r="3.5"/><circle cx="35" cy="37" r="3.5"/><path d="M17.5 37h14"/></svg>' },
+      { id: "vracht",  name: "Vrachtwagen", tag: "Vrachtwagen, bakwagen of trailer", noInstall: true,
+        icon: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h24v22H4z"/><path d="M28 19h8.5l7.5 8v7h-16"/><circle cx="12" cy="37" r="3.5"/><circle cx="36" cy="37" r="3.5"/><path d="M15.5 37H28"/></svg>' },
+    ];
+    const RECLAME_PAKKETTEN = [
+      { id: "belettering", name: "Standaard belettering", tag: "Logo en tekst op deuren en/of achterzijde" },
+      { id: "half",        name: "Halve wrap",            tag: "Achterzijde en delen van de zijkanten" },
+      { id: "vol",         name: "Volledige wrap",        tag: "Het hele voertuig in eigen ontwerp" },
+    ];
+    const reclameInfo = () => {
+      const v = RECLAME_VOERTUIGEN.find((x) => x.id === state.reclame.voertuig);
+      const pk = RECLAME_PAKKETTEN.find((x) => x.id === state.reclame.pakket);
+      const pr = RECLAME_PRIJZEN[state.reclame.voertuig];
+      return { v, pk, prijs: pr && pk ? pr[pk.id] : null };
+    };
+    function renderReclame() {
+      if (!$("recVoertuigGrid").dataset.drawn) {
+        $("recVoertuigGrid").innerHTML = RECLAME_VOERTUIGEN.map(cardHTML).join("");
+        bindCards($("recVoertuigGrid"), (id) => {
+          state.reclame.voertuig = id;
+          selectOne($("recVoertuigGrid"), id);
+          renderReclamePakketten();
+          update();
+        });
+        $("recVoertuigGrid").dataset.drawn = "1";
+      }
+      selectOne($("recVoertuigGrid"), state.reclame.voertuig);
+      renderReclamePakketten();
+    }
+    function renderReclamePakketten() {
+      const pr = RECLAME_PRIJZEN[state.reclame.voertuig];
+      $("recPakketGrid").innerHTML = RECLAME_PAKKETTEN.map((o) => cardHTML(pr
+        ? { ...o, price: "indicatie vanaf " + euro(pr[o.id]) }
+        : o)).join("");
+      bindCards($("recPakketGrid"), (id) => {
+        state.reclame.pakket = id;
+        selectOne($("recPakketGrid"), id);
+        recIndicatieUpdate();
+        update();
+      });
+      selectOne($("recPakketGrid"), state.reclame.pakket);
+      recIndicatieUpdate();
+    }
+    function recIndicatieUpdate() {
+      const { prijs } = reclameInfo();
+      $("recIndicatie").innerHTML = prijs != null
+        ? "Indicatie: <strong>vanaf " + euro(prijs) + "</strong> \u2014 de definitieve prijs hangt af van het ontwerp, het aantal kleuren en het voertuig. Na je aanvraag ontvang je een offerte op maat."
+        : "";
     }
     const getal = (v) => {
       const n = parseFloat(String(v).replace(",", "."));
@@ -968,6 +1067,17 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
             <p class="pp-note">Hiervoor gelden maatwerkprijzen. Maak je aanvraag af en we stellen een offerte op.</p>`;
           return;
         }
+        if (state.cat === "reclame") {
+          const { v, pk, prijs } = reclameInfo();
+          $("summaryBox").innerHTML = `
+            <h3>Jouw aanvraag</h3>
+            <div class="pp-row"><span>Type</span><span>Bedrijfsreclame</span></div>
+            <div class="pp-row"><span>Voertuig</span><span>${v ? v.name : ""}</span></div>
+            <div class="pp-row"><span>Pakket</span><span>${pk ? pk.name : ""}</span></div>
+            <div class="pp-row pp-total-row"><span>Prijsindicatie</span><span class="pp-r-price">${prijs != null ? "vanaf " + euro(prijs) : "Op aanvraag"}</span></div>
+            <p class="pp-note">Dit is een indicatie. De definitieve prijs hangt af van het ontwerp, het aantal kleuren en het voertuig. Maak je aanvraag af en we stellen een offerte op maat.</p>`;
+          return;
+        }
         $("summaryBox").innerHTML = `
           <h3>Jouw aanvraag</h3>
           <div class="pp-row"><span>Categorie</span><span>${cat.name}</span></div>
@@ -1001,6 +1111,11 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
             regels.map((r) => r.label + ": " + r.maat).join("\n") +
             "\nTotaal glasoppervlak: " + m2str(tot) + " m\u00b2\nPrijs: op aanvraag (offerte volgt)";
         }
+        if (state.cat === "reclame") {
+          const { v, pk, prijs } = reclameInfo();
+          return "Type: Bedrijfsreclame\nVoertuig: " + (v ? v.name : "") + "\nPakket: " + (pk ? pk.name : "") +
+            "\nPrijsindicatie: " + (prijs != null ? "vanaf " + euro(prijs) : "op aanvraag") + " (offerte op maat volgt)";
+        }
         return "Categorie: " + cat.name + "\nPrijs: op aanvraag (offerte volgt)";
       }
       const { rows, total } = calc();
@@ -1030,6 +1145,15 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
           h += rij("Prijs", "Op aanvraag");
           return h + "</table>";
         }
+        if (state.cat === "reclame") {
+          const { v, pk, prijs } = reclameInfo();
+          let h = '<table width="100%" cellpadding="0" cellspacing="0">';
+          h += rij("Type", "Bedrijfsreclame");
+          h += rij("Voertuig", v ? v.name : "");
+          h += rij("Pakket", pk ? pk.name : "");
+          h += rij("Prijsindicatie", prijs != null ? "vanaf " + euro(prijs) : "Op aanvraag");
+          return h + "</table>";
+        }
         return '<table width="100%" cellpadding="0" cellspacing="0">' + rij("Categorie", cat.name) + rij("Prijs", "Op aanvraag") + "</table>";
       }
       const { rows, total } = calc();
@@ -1043,6 +1167,12 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
       return h;
     }
 
+    const mailOnderwerp = () => (state.cat === "reclame" ? "Nieuwe aanvraag bedrijfsreclame" : "Nieuwe aanvraag ramen blinderen") + " \u2014 " + $("fn").value.trim() + " " + $("ln").value.trim();
+    const datumTekst = () => {
+      const v = $("wanneer").value;
+      if (!v) return "";
+      return new Date(v + "T12:00:00").toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    };
     const metTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms || 5000))]);
     const adresVeld = (id) => { const el = $(id); return el ? el.value.trim() : ""; };
     const volledigAdres = () => {
@@ -1087,6 +1217,10 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
         alert("Vul het volledige adres in (straat, huisnummer, postcode en dorp/stad).");
         return;
       }
+      if ($("wanneer").value && $("wanneer").min && $("wanneer").value < $("wanneer").min) {
+        alert("De gekozen voorkeursdatum ligt v\u00f3\u00f3r de eerst mogelijke datum (" + datumTekst() + " is niet beschikbaar). Kies een latere datum.");
+        return;
+      }
       if (CONFIG.formEndpoint) {
         const btn = $("btnNext");
         btn.disabled = true;
@@ -1098,13 +1232,14 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
           Achternaam: $("ln").value.trim(),
           "E-mailadres": $("em").value.trim(),
           Telefoonnummer: $("tel").value.trim(),
-          Voorkeursdatum: $("wanneer").value,
+          Voorkeursdatum: datumTekst(),
+          Herkomst: $("herkomst").value,
           Locatie: volledigAdres(),
           Kenteken: $("kenteken").value.trim().toUpperCase(),
           Bericht: $("msg").value.trim(),
           Overzicht: overzicht,
           Reiskosten: reiskosten,
-          _subject: "Nieuwe aanvraag ramen blinderen \u2014 " + $("fn").value.trim() + " " + $("ln").value.trim(),
+          _subject: mailOnderwerp(),
           _replyto: $("em").value.trim(),
           _template: "table",
           _autoresponse: "Bedankt voor je aanvraag bij Pieter Plakt!\n\nDit is jouw overzicht:\n\n" + overzicht +
@@ -1116,7 +1251,8 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
             achternaam: $("ln").value.trim(),
             email: $("em").value.trim(),
             telefoon: $("tel").value.trim(),
-            voorkeursdatum: $("wanneer").value,
+            voorkeursdatum: datumTekst(),
+            herkomst: $("herkomst").value,
             locatie: volledigAdres(),
             straat: adresVeld("locStraat"),
             huisnummer: adresVeld("locNr"),
@@ -1127,7 +1263,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
             overzicht: overzicht,
             overzichtHtml: bouwOverzichtHtml(),
             reiskosten: reiskosten,
-            onderwerp: "Nieuwe aanvraag ramen blinderen \u2014 " + $("fn").value.trim() + " " + $("ln").value.trim(),
+            onderwerp: mailOnderwerp(),
           };
           let frame = document.getElementById("pp-mailframe");
           if (!frame) {
@@ -1201,15 +1337,41 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
         bar.appendChild(d);
       }
       const { total } = calc();
-      $("totalAmt").textContent = isQuoteFlow() ? "Op aanvraag" :
+      const recPrijs = state.cat === "reclame" ? reclameInfo().prijs : null;
+      $("totalAmt").textContent = state.cat === "reclame" ? (recPrijs != null ? "vanaf " + euro(recPrijs) : "Op aanvraag") :
+        isQuoteFlow() ? "Op aanvraag" :
         (state.body ? euro(total) : "vanaf " + euro(CONFIG.vanafPrijs));
-      $("btwLine").textContent = isQuoteFlow() ? "Maatwerk \u00b7 offerte binnen 3 werkdagen" : "Inclusief BTW \u00b7 inclusief installatie \u00b7 prijzen onder voorbehoud";
+      $("btwLine").textContent = state.cat === "reclame" ? "Prijsindicatie \u00b7 offerte op maat binnen 3 werkdagen" :
+        isQuoteFlow() ? "Maatwerk \u00b7 offerte binnen 3 werkdagen" : "Inclusief BTW \u00b7 inclusief installatie \u00b7 prijzen onder voorbehoud";
       $("btnPrev").disabled = state.step === 1;
       $("btnNext").disabled = !stepValid();
       $("btnNext").textContent = state.step === 5 ? "Aanvraag versturen" :
-        (state.step === 1 && isQuoteFlow() && state.cat !== "pand") ? "Offerte aanvragen" : "Volgende stap";
+        (state.step === 1 && isQuoteFlow() && state.cat !== "pand" && state.cat !== "reclame") ? "Offerte aanvragen" : "Volgende stap";
       paintCar();
     }
+
+    /* -------- eerst mogelijke voorkeursdatum (terugval + Google Agenda via Make) -------- */
+    (function initDatum() {
+      const A = CONFIG.agenda || {};
+      const veld = $("wanneer");
+      const zetMin = (iso) => {
+        veld.min = iso;
+        if (veld.value && veld.value < iso) veld.value = "";
+        $("wanneerHint").textContent = "Eerst mogelijke datum: " +
+          new Date(iso + "T12:00:00").toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" });
+      };
+      const plusDagen = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+      zetMin(plusDagen(A.minDagenVooruit || 0));
+      if (A.beschikbaarheidUrl) {
+        metTimeout(fetch(A.beschikbaarheidUrl), 5000)
+          .then((r) => r.json())
+          .then((j) => {
+            const iso = j && /^\d{4}-\d{2}-\d{2}$/.test(String(j.eersteDatum || "")) ? j.eersteDatum : null;
+            if (iso && iso > veld.min) zetMin(iso);
+          })
+          .catch(() => {}); // stilzwijgend terugvallen op minDagenVooruit
+      }
+    })();
 
     // Start (zonder scroll bij eerste render)
     state.step = 1;
