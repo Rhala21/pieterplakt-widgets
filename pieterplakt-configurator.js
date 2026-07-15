@@ -30,10 +30,14 @@
       kmPrijs: 0.35,               // \u20ac per km
       uurtarief: 75,               // \u20ac per uur reistijd, excl. btw
     },             // glasoppervlak per raam naar boven afronden op deze stap (0.1 = per 0,1 m\u00b2; 1 = hele m\u00b2)
-    agenda: {                      // eerst mogelijke datum voor het voorkeursdatum-veld
-      // Make-webhook die {"eersteDatum":"JJJJ-MM-DD"} teruggeeft op basis van jullie
-      // Google Agenda (zie make-setup-instructies.md, scenario 2). Leeg = alleen terugvaloptie.
-      beschikbaarheidUrl: "",
+    agenda: {                      // beschikbaarheid voor het voorkeursdatum-veld
+      // Make-webhook op basis van jullie Google Agenda (zie make-setup-instructies.md, scenario 2).
+      // Twee antwoordvormen worden ondersteund:
+      //   {"datums":["JJJJ-MM-DD", ...]}  -> keuzelijst met ALLEEN deze dagen
+      //      (agenda-afspraken met de titel "Pieter Plakt - Blinderen/Tinten")
+      //   {"eersteDatum":"JJJJ-MM-DD"}    -> datumveld met deze dag als ondergrens
+      // Leeg of onbereikbaar = terugvaloptie hieronder; het formulier blokkeert hier nooit op.
+      beschikbaarheidUrl: "https://hook.eu1.make.com/4vm9arlf4mquzylukdhiu6blsoukq03c",
       minDagenVooruit: 3,          // terugvaloptie: eerst mogelijke datum = vandaag + dit aantal dagen
     },
     disclaimer: "Aan de getoonde prijzen kunnen geen rechten worden ontleend. Prijzen onder voorbehoud van fouten en wijzigingen.",
@@ -407,7 +411,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
     <p class="pp-step-sub">Het pakket geldt voor de zijruiten en achterruit. Alle pakketten zijn inclusief installatie en montage.</p>
     <div class="pp-preview">
       <svg data-pp="carSvg2" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Livebeeld tintniveau"></svg>
-      <div class="pp-hint">Livebeeld van het tintniveau van jouw pakket \u00b7 v3.11</div>
+      <div class="pp-hint">Livebeeld van het tintniveau van jouw pakket \u00b7 v3.12</div>
     </div>
     <div class="pp-grid pp-c2" data-pp="pkgGrid"></div>
   </section>
@@ -418,7 +422,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
     <p class="pp-step-sub">Selecteer de ruiten. In het livebeeld zie je direct welke ruiten getint worden.</p>
     <div class="pp-preview">
       <svg data-pp="carSvg" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Livebeeld van geselecteerde ruiten"></svg>
-      <div class="pp-hint">Livebeeld \u2014 jouw pakketkeuze bepaalt hoe donker de tint is \u00b7 v3.11</div>
+      <div class="pp-hint">Livebeeld \u2014 jouw pakketkeuze bepaalt hoe donker de tint is \u00b7 v3.12</div>
     </div>
 
     <h4 class="pp-group-title">Voorzijde</h4>
@@ -1171,6 +1175,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
     const datumTekst = () => {
       const v = $("wanneer").value;
       if (!v) return "";
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return v; // keuzelijst-optie zoals "Geen van deze data \u2014 in overleg"
       return new Date(v + "T12:00:00").toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
     };
     const metTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms || 5000))]);
@@ -1350,26 +1355,44 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
       paintCar();
     }
 
-    /* -------- eerst mogelijke voorkeursdatum (terugval + Google Agenda via Make) -------- */
+    /* -------- voorkeursdatum: beschikbare dagen uit Google Agenda via Make -------- */
     (function initDatum() {
       const A = CONFIG.agenda || {};
-      const veld = $("wanneer");
+      const isIso = (v) => /^\d{4}-\d{2}-\d{2}$/.test(String(v));
+      const fmtLang = (iso) => new Date(iso + "T12:00:00").toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
       const zetMin = (iso) => {
+        const veld = $("wanneer");
         veld.min = iso;
         if (veld.value && veld.value < iso) veld.value = "";
         $("wanneerHint").textContent = "Eerst mogelijke datum: " +
           new Date(iso + "T12:00:00").toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" });
       };
+      const maakKeuzelijst = (datums) => {
+        const oud = $("wanneer");
+        const sel = document.createElement("select");
+        sel.setAttribute("data-pp", "wanneer");
+        sel.innerHTML = '<option value="">Maak een keuze (optioneel)</option>' +
+          datums.map((iso) => '<option value="' + iso + '">' + fmtLang(iso) + "</option>").join("") +
+          '<option value="Geen van deze data \u2014 in overleg">Geen van deze data \u2014 in overleg</option>';
+        if (oud.value && datums.indexOf(oud.value) >= 0) sel.value = oud.value;
+        oud.replaceWith(sel);
+        $("wanneerHint").textContent = "Alleen dagen waarop we plek hebben.";
+      };
       const plusDagen = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+      const vandaag = plusDagen(0);
       zetMin(plusDagen(A.minDagenVooruit || 0));
       if (A.beschikbaarheidUrl) {
         metTimeout(fetch(A.beschikbaarheidUrl), 5000)
           .then((r) => r.json())
           .then((j) => {
-            const iso = j && /^\d{4}-\d{2}-\d{2}$/.test(String(j.eersteDatum || "")) ? j.eersteDatum : null;
-            if (iso && iso > veld.min) zetMin(iso);
+            if (j && Array.isArray(j.datums)) {
+              const datums = Array.from(new Set(j.datums.filter(isIso).filter((d) => d >= vandaag))).sort();
+              if (datums.length) { maakKeuzelijst(datums); return; }
+            }
+            const iso = j && isIso(j.eersteDatum) ? j.eersteDatum : null;
+            if (iso && iso > $("wanneer").min) zetMin(iso);
           })
-          .catch(() => {}); // stilzwijgend terugvallen op minDagenVooruit
+          .catch(() => {}); // stilzwijgend terugvallen op het gewone datumveld met minDagenVooruit
       }
     })();
 
