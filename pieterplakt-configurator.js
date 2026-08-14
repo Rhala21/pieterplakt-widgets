@@ -1343,6 +1343,11 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
       $("p5Label").textContent = "Klaar \u2713";
       root.querySelector(".pp-bar").classList.add("pp-hidden");
       $("stepBar").querySelectorAll(".pp-s").forEach((d) => { d.className = "pp-s pp-done"; });
+      // de pagina krimpt doordat formulier, samenvatting en balk verdwijnen:
+      // terugscrollen zodat de bevestiging in beeld komt
+      requestAnimationFrame(() => {
+        root.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
     }
 
     function update() {
