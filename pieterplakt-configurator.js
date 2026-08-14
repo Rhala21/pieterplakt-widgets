@@ -1323,6 +1323,20 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
         f.remove();
         }
       }
+      // --- GA4 / Google Ads: conversie doorgeven (geen persoonsgegevens) ---
+      try {
+        const conversieWaarde = state.cat === "reclame"
+          ? (reclameInfo().prijs || 0)
+          : (isQuoteFlow() ? 0 : calc().total);
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push({
+          event: "offerte_aanvraag",
+          categorie: state.cat || "onbekend",
+          waarde: conversieWaarde,
+          valuta: "EUR",
+        });
+      } catch (e) {}
+
       $("quoteForm").classList.add("pp-hidden");
       $("summaryBox").classList.add("pp-hidden");
       $("doneBox").classList.remove("pp-hidden");
