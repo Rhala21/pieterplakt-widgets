@@ -13,8 +13,8 @@ Prijsconfigurator-widget voor pieterplakt.nl (ramen blinderen/tinten), als embed
 
 - **Repo:** `Rhala21/pieterplakt-widgets` → geserveerd via jsDelivr.
 - **Embed:** `<div id="pp-configurator"></div><script src="https://cdn.jsdelivr.net/gh/Rhala21/pieterplakt-widgets@main/pieterplakt-configurator.js" defer></script>`
-- **Bestanden in de repo:** `pieterplakt-configurator.js` (kern, ±80KB), `cars/*.json` (8 automodellen, on-demand geladen via pad naast het script of `window.PP_CARS`), `pieter-plakt-wit.png`, dit dossier.
-- **Na elke wijziging:** bestand uploaden → cache purgen: `https://purge.jsdelivr.net/gh/Rhala21/pieterplakt-widgets@main/<bestand>` → harde refresh → **versienummer onder het livebeeld checken** (staat in de hint-teksten; bij elke wijziging ophogen, nu v3.13).
+- **Bestanden in de repo:** `pieterplakt-configurator.js` (kern, ±80KB), `cars/*.json` (8 automodellen, on-demand geladen via pad naast het script of `window.PP_CARS`), `pieter-plakt-wit.png`, dit dossier en `test.js` (zelfcheck geldlogica: `node test.js` draaien na elke prijs- of formulewijziging, vóór het uploaden).
+- **Na elke wijziging:** bestand uploaden → cache purgen: `https://purge.jsdelivr.net/gh/Rhala21/pieterplakt-widgets@main/<bestand>` → harde refresh → **versienummer onder het livebeeld checken** (staat in de hint-teksten; bij elke wijziging ophogen, nu v3.14).
 - **Testbestand:** `index.html` (alles-in-één met `window.PP_CARS` ingebakken, `</script>` in de code escapen naar `<\/script>`) voor static.app/tiiny — nooit naar GitHub.
 
 ## 3. Flow (stand v3.13)
@@ -25,7 +25,7 @@ Stap 1 categorie → per categorie een eigen route:
 - **Bedrijfsreclame** (prijsindicatie, sinds aug): voertuigtype (`RECLAME_VOERTUIGEN`) + pakket (`RECLAME_PAKKETTEN`: standaard belettering / halve wrap / volledige wrap) met indicatie (`recIndicatie`).
 - **Werkbussen / Machines & Vrachtwagens**: direct offerte.
 
-Contactformulier: voornaam/achternaam/e-mail/telefoon, **voorkeursdatum met agenda-koppeling** (zie §6), **losse adresvelden** Straat*/Huisnummer*/Postcode*/Dorp-Stad* (zichtbaar bij categorieën met locatie), **Herkomst-dropdown** (Google / Social media / Via via / Eerder klant / Anders), bericht. Bevestiging "Klaar ✓".
+Contactformulier: voornaam/achternaam/e-mail/telefoon, **voorkeursdatum met agenda-koppeling** (zie §6), **losse adresvelden** Straat*/Huisnummer*/Postcode*/Dorp-Stad* (zichtbaar bij categorieën met locatie), **Herkomst-dropdown** (Google / Social media / Via via / Eerder klant / Anders), bericht. Bevestiging "Klaar ✓". Versturen gaat via fetch (no-cors, timeout 8s): bij een netwerkfout krijgt de klant een foutmelding met het telefoonnummer in plaats van een vals succes-scherm; klantinvoer wordt HTML-geëscaped (esc()) voordat hij in overzichten en mailvelden belandt; een handmatige typekeuze wordt niet overschreven door een laat RDW-antwoord.
 
 ## 4. Livebeeld (vectoraanpak — zo verwerken bij nieuwe tekeningen)
 

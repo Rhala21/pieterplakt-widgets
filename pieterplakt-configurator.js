@@ -411,7 +411,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
     <p class="pp-step-sub">Het pakket geldt voor de zijruiten en achterruit. Alle pakketten zijn inclusief installatie en montage.</p>
     <div class="pp-preview">
       <svg data-pp="carSvg2" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Livebeeld tintniveau"></svg>
-      <div class="pp-hint">Livebeeld van het tintniveau van jouw pakket \u00b7 v3.13</div>
+      <div class="pp-hint">Livebeeld van het tintniveau van jouw pakket \u00b7 v3.14</div>
     </div>
     <div class="pp-grid pp-c2" data-pp="pkgGrid"></div>
   </section>
@@ -422,7 +422,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
     <p class="pp-step-sub">Selecteer de ruiten. In het livebeeld zie je direct welke ruiten getint worden.</p>
     <div class="pp-preview">
       <svg data-pp="carSvg" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Livebeeld van geselecteerde ruiten"></svg>
-      <div class="pp-hint">Livebeeld \u2014 jouw pakketkeuze bepaalt hoe donker de tint is \u00b7 v3.13</div>
+      <div class="pp-hint">Livebeeld \u2014 jouw pakketkeuze bepaalt hoe donker de tint is \u00b7 v3.14</div>
     </div>
 
     <h4 class="pp-group-title">Voorzijde</h4>
@@ -567,6 +567,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
       voorzijde: null,                                         // null | "ceramisch" | "chameleon"
       rdw: null, modelToeslag: null,
       removeFoil: false, pkg: "XR", zonneband: false,          // Pakket XR standaard
+      handmatig: false,                                        // true = gebruiker koos zelf een type; RDW overschrijft dan niet
       pand: { type: null, folie: null, floors: [
         { naam: "Begane grond", ramen: [{ ref: "", b: "", h: "" }] },
         { naam: "Eerste verdieping", ramen: [{ ref: "", b: "", h: "" }] },
@@ -574,6 +575,9 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
       reclame: { voertuig: null, pakket: null },
     };
     const euro = (n) => "\u20ac " + n.toLocaleString("nl-NL");
+    // klant- en RDW-invoer veilig maken voor HTML-context (pagina + mails)
+    const esc = (t) => String(t == null ? "" : t)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     const prijzen = () => PRIJZEN[state.body] || PRIJZEN.sedan;
 
     $("zbPrijs").textContent = "(+ " + euro(ZONNEBAND_PRIJS) + ")";
@@ -653,13 +657,13 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
           let extra = state.modelToeslag ? " \u00b7 modeltoeslag " + state.modelToeslag.label + " van toepassing" : "";
           const typeMatch = zoekMatch(MODEL_TYPES, state.rdw.merk, state.rdw.model, jaar);
           const autoBody = (typeMatch && PRIJZEN[typeMatch.body]) ? typeMatch.body : bodyVanRdw(v, carr);
-          if (autoBody && PRIJZEN[autoBody]) {
+          if (autoBody && PRIJZEN[autoBody] && !state.handmatig) {
             kiesType(autoBody);
             extra += autoBody === "suv5"
               ? " \u00b7 herkend als Station/SUV \u2014 rijd je een hatchback? Pas het type hieronder aan"
               : " \u00b7 type automatisch geselecteerd \u2014 klopt het niet? Pas het hieronder aan";
           }
-          status.innerHTML = "\u2713 Gevonden: <strong>" + state.rdw.merk + " " + state.rdw.model + (jaar ? " (" + jaar + ")" : "") + "</strong>" + extra;
+          status.innerHTML = "\u2713 Gevonden: <strong>" + esc(state.rdw.merk + " " + state.rdw.model) + (jaar ? " (" + jaar + ")" : "") + "</strong>" + extra;
         } else {
           status.textContent = "Kenteken niet gevonden \u2014 je kunt gewoon verder.";
         }
@@ -668,8 +672,8 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
       }
       update();
     }
-    $("kenteken").addEventListener("input", () => { clearTimeout(rdwTimer); rdwTimer = setTimeout(kentekenCheck, 600); });
-    $("kenteken").addEventListener("blur", kentekenCheck);
+    $("kenteken").addEventListener("input", () => { state.handmatig = false; clearTimeout(rdwTimer); rdwTimer = setTimeout(kentekenCheck, 600); });
+    $("kenteken").addEventListener("blur", () => { clearTimeout(rdwTimer); kentekenCheck(); });   // fix 8: geen dubbele lookup
 
     $("catGrid").innerHTML = CATS.map(cardHTML).join("");
     bindCards($("catGrid"), (id) => { state.cat = id; selectOne($("catGrid"), id); update(); });
@@ -684,7 +688,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
       ensureCar(() => update());
       update();
     }
-    bindCards($("bodyGrid"), (id) => kiesType(id));
+    bindCards($("bodyGrid"), (id) => { state.handmatig = true; kiesType(id); });
 
     $("pkgGrid").innerHTML = PKGS.map(cardHTML).join("");
     bindCards($("pkgGrid"), (id) => { state.pkg = id; selectOne($("pkgGrid"), id); update(); });
@@ -981,7 +985,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
     }
     const VERDIEPINGEN = ["Begane grond", "Eerste verdieping", "Tweede verdieping", "Derde verdieping", "Vierde verdieping", "Vijfde verdieping"];
     function hernoemVerdiepingen() {
-      state.pand.floors.forEach((fl, i) => { fl.naam = VERDIEPINGEN[i] || (i + "e verdieping"); });
+      state.pand.floors.forEach((fl, i) => { fl.naam = VERDIEPINGEN[i] || (i + "e verdieping"); });   // index 6 = "6e verdieping": klopt, VERDIEPINGEN dekt t/m de 5e (index 5)
     }
     function m2Update() {
       const tot = raamRegels().reduce((a, r) => a + r.m2, 0);
@@ -1065,7 +1069,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
             <h3>Jouw aanvraag</h3>
             <div class="pp-row"><span>Type pand</span><span>${type ? type.name : ""}</span></div>
             <div class="pp-row"><span>Soort folie</span><span>${folie ? folie.name : ""}</span></div>
-            ${regels.map((r) => `<div class="pp-row"><span>${r.label}</span><span class="pp-r-price">${r.maat}</span></div>`).join("")}
+            ${regels.map((r) => `<div class="pp-row"><span>${esc(r.label)}</span><span class="pp-r-price">${r.maat}</span></div>`).join("")}
             <div class="pp-row"><span>Totaal glasoppervlak</span><span class="pp-r-price">${m2str(tot)} m\u00b2</span></div>
             <div class="pp-row pp-total-row"><span>Prijs</span><span class="pp-r-price">Op aanvraag</span></div>
             <p class="pp-note">Hiervoor gelden maatwerkprijzen. Maak je aanvraag af en we stellen een offerte op.</p>`;
@@ -1094,7 +1098,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
       const pkg = state.pkg && state.windows.size ? PKGS.find((p) => p.id === state.pkg).name : "";
       $("summaryBox").innerHTML = `
         <h3>Jouw gekozen opties</h3>
-        <div class="pp-row"><span>Voertuig</span><span>${state.rdw ? state.rdw.merk + " " + state.rdw.model + " \u00b7 " : ""}${body.name}${kent ? " \u00b7 " + kent : ""}</span></div>
+        <div class="pp-row"><span>Voertuig</span><span>${esc(state.rdw ? state.rdw.merk + " " + state.rdw.model + " \u00b7 " : "")}${body.name}${kent ? " \u00b7 " + esc(kent) : ""}</span></div>
         ${pkg ? `<div class="pp-row"><span>Foliepakket zijruiten/achterruit</span><span>${pkg}</span></div>` : ""}
         ${rows.map(([n, p]) => `<div class="pp-row"><span>${n}</span><span class="pp-r-price">${typeof p === "number" ? euro(p) : p}</span></div>`).join("")}
         <div class="pp-row pp-total-row"><span>Totaalbedrag</span><span class="pp-r-price">${euro(total)}</span></div>
@@ -1152,7 +1156,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
           let h = '<table width="100%" cellpadding="0" cellspacing="0">';
           h += rij("Type pand", type ? type.name : "");
           h += rij("Soort folie", folie ? folie.name : "");
-          regels.forEach((r) => { h += rij(r.label, r.maat); });
+          regels.forEach((r) => { h += rij(esc(r.label), r.maat); });
           h += rij("Totaal glasoppervlak", m2str(tot) + " m\u00b2");
           h += rij("Prijs", "Op aanvraag");
           return h + "</table>";
@@ -1172,7 +1176,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
       const body = BODIES.find((b) => b.id === state.body);
       const pkg = state.pkg && state.windows.size ? PKGS.find((p) => p.id === state.pkg).name : "";
       let h = '<table width="100%" cellpadding="0" cellspacing="0">';
-      h += rij("Voertuig", (state.rdw ? state.rdw.merk + " " + state.rdw.model + " \u00b7 " : "") + (body ? body.name : "") + (kent ? " \u00b7 " + kent : ""));
+      h += rij("Voertuig", esc(state.rdw ? state.rdw.merk + " " + state.rdw.model + " \u00b7 " : "") + (body ? body.name : "") + (kent ? " \u00b7 " + esc(kent) : ""));
       if (pkg) h += rij("Foliepakket zijruiten/achterruit", pkg);
       rows.forEach(([n, p]) => { h += rij(n, typeof p === "number" ? euro(p) : p); });
       h += '<tr><td style="padding:14px 0 0;font-weight:700;font-size:16px">Totaalbedrag</td><td style="padding:14px 0 0;text-align:right"><span style="background:#ffb700;border-radius:999px;padding:4px 16px;font-weight:700;font-size:16px;white-space:nowrap">' + euro(total) + "</span></td></tr></table>";
@@ -1234,101 +1238,67 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
         alert("De gekozen voorkeursdatum ligt v\u00f3\u00f3r de eerst mogelijke datum (" + datumTekst() + " is niet beschikbaar). Kies een latere datum.");
         return;
       }
-      if (CONFIG.formEndpoint) {
+      // Verzenden: webhook (Make) voorop, anders FormSubmit; mislukt het netwerk, dan
+      // krijgt de klant een melding in plaats van een vals "verstuurd"-scherm.
+      async function verstuur(url, velden) {
+        const fd = new FormData();
+        Object.keys(velden).forEach((k) => fd.append(k, velden[k]));
+        // no-cors: het antwoord is niet leesbaar, maar een netwerkfout of timeout w\u00e9l vangbaar
+        await metTimeout(fetch(url, { method: "POST", body: fd, mode: "no-cors", keepalive: true }), 8000);
+      }
+      if (CONFIG.webhookUrl || CONFIG.formEndpoint) {
         const btn = $("btnNext");
         btn.disabled = true;
         btn.textContent = "Versturen\u2026";
         const overzicht = bouwOverzicht();
         const reiskosten = await berekenReiskosten();
-        const payload = {
-          Voornaam: $("fn").value.trim(),
-          Achternaam: $("ln").value.trim(),
-          "E-mailadres": $("em").value.trim(),
-          Telefoonnummer: $("tel").value.trim(),
-          Voorkeursdatum: datumTekst(),
-          Herkomst: $("herkomst").value,
-          Adres: volledigAdres(),
-          Kenteken: $("kenteken").value.trim().toUpperCase(),
-          Bericht: $("msg").value.trim(),
-          Overzicht: overzicht,
-          Reiskosten: reiskosten,
-          _subject: mailOnderwerp(),
-          _replyto: $("em").value.trim(),
-          _template: "table",
-          _autoresponse: "Bedankt voor je aanvraag bij Pieter Plakt!\n\nDit is jouw overzicht:\n\n" + overzicht +
-            "\n\nWij sturen binnen 2 werkdagen een mailtje met de eerst beschikbare mogelijkheid. Kun je daar niet op wachten? Neem dan telefonisch contact met ons op via " + CONFIG.telefoon + ".\n\n" + CONFIG.disclaimer,
-        };
-        if (CONFIG.webhookUrl) {
-          const data = {
-            voornaam: $("fn").value.trim(),
-            achternaam: $("ln").value.trim(),
-            email: $("em").value.trim(),
-            telefoon: $("tel").value.trim(),
-            voorkeursdatum: datumTekst(),
-            herkomst: $("herkomst").value,
-            locatie: volledigAdres(),
-            straat: adresVeld("locStraat"),
-            huisnummer: adresVeld("locNr"),
-            postcode: adresVeld("locPc"),
-            plaats: adresVeld("locPlaats"),
-            kenteken: $("kenteken").value.trim().toUpperCase(),
-            bericht: $("msg").value.trim(),
-            overzicht: overzicht,
-            overzichtHtml: bouwOverzichtHtml(),
-            reiskosten: reiskosten,
-            onderwerp: mailOnderwerp(),
-          };
-          let frame = document.getElementById("pp-mailframe");
-          if (!frame) {
-            frame = document.createElement("iframe");
-            frame.id = "pp-mailframe";
-            frame.name = "pp-mailframe";
-            frame.style.display = "none";
-            document.body.appendChild(frame);
+        try {
+          if (CONFIG.webhookUrl) {
+            await verstuur(CONFIG.webhookUrl, {
+              voornaam: esc($("fn").value.trim()),
+              achternaam: esc($("ln").value.trim()),
+              email: $("em").value.trim(),
+              telefoon: esc($("tel").value.trim()),
+              voorkeursdatum: esc(datumTekst()),
+              herkomst: $("herkomst").value,
+              locatie: esc(volledigAdres()),
+              straat: esc(adresVeld("locStraat")),
+              huisnummer: esc(adresVeld("locNr")),
+              postcode: esc(adresVeld("locPc")),
+              plaats: esc(adresVeld("locPlaats")),
+              kenteken: esc($("kenteken").value.trim().toUpperCase()),
+              bericht: esc($("msg").value.trim()),
+              overzicht: overzicht,
+              overzichtHtml: bouwOverzichtHtml(),
+              reiskosten: esc(reiskosten),
+              onderwerp: mailOnderwerp(),
+            });
+          } else {
+            await verstuur(CONFIG.formEndpoint, {
+              Voornaam: $("fn").value.trim(),
+              Achternaam: $("ln").value.trim(),
+              "E-mailadres": $("em").value.trim(),
+              Telefoonnummer: $("tel").value.trim(),
+              Voorkeursdatum: datumTekst(),
+              Herkomst: $("herkomst").value,
+              Adres: volledigAdres(),
+              Kenteken: $("kenteken").value.trim().toUpperCase(),
+              Bericht: $("msg").value.trim(),
+              Overzicht: overzicht,
+              Reiskosten: reiskosten,
+              _subject: mailOnderwerp(),
+              _replyto: $("em").value.trim(),
+              _template: "table",
+              _captcha: "false",
+              _autoresponse: "Bedankt voor je aanvraag bij Pieter Plakt!\n\nDit is jouw overzicht:\n\n" + overzicht +
+                "\n\nWij sturen binnen 2 werkdagen een mailtje met de eerst beschikbare mogelijkheid. Kun je daar niet op wachten? Neem dan telefonisch contact met ons op via " + CONFIG.telefoon + ".\n\n" + CONFIG.disclaimer,
+            });
           }
-          const f = document.createElement("form");
-          f.method = "POST";
-          f.action = CONFIG.webhookUrl;
-          f.target = "pp-mailframe";
-          f.style.display = "none";
-          Object.keys(data).forEach((k) => {
-            const inp = document.createElement("input");
-            inp.type = "hidden";
-            inp.name = k;
-            inp.value = data[k];
-            f.appendChild(inp);
-          });
-          document.body.appendChild(f);
-          f.submit();
-          await new Promise((r) => setTimeout(r, 900));
-          f.remove();
-        } else {
-        payload._captcha = "false";
-        // Versturen via een verborgen formulier-post: werkt vanaf elk domein, zonder CORS-beperkingen
-        let frame = document.getElementById("pp-mailframe");
-        if (!frame) {
-          frame = document.createElement("iframe");
-          frame.id = "pp-mailframe";
-          frame.name = "pp-mailframe";
-          frame.style.display = "none";
-          document.body.appendChild(frame);
-        }
-        const f = document.createElement("form");
-        f.method = "POST";
-        f.action = CONFIG.formEndpoint;
-        f.target = "pp-mailframe";
-        f.style.display = "none";
-        Object.keys(payload).forEach((k) => {
-          const inp = document.createElement("input");
-          inp.type = "hidden";
-          inp.name = k;
-          inp.value = payload[k];
-          f.appendChild(inp);
-        });
-        document.body.appendChild(f);
-        f.submit();
-        await new Promise((r) => setTimeout(r, 900));
-        f.remove();
+        } catch (e) {
+          alert("Het versturen is helaas niet gelukt. Probeer het opnieuw of neem telefonisch contact op via " + CONFIG.telefoon + ".");
+          btn.disabled = false;
+          btn.textContent = "Aanvraag versturen";
+          return;
         }
       }
       // --- GA4 / Google Ads: conversie doorgeven (geen persoonsgegevens) ---
@@ -1405,7 +1375,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
         oud.replaceWith(sel);
         $("wanneerHint").textContent = "Alleen dagen waarop we plek hebben.";
       };
-      const plusDagen = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+      const plusDagen = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toLocaleDateString("sv-SE"); };   // lokale datum (JJJJ-MM-DD), geen UTC-verschuiving 's nachts
       const vandaag = plusDagen(0);
       zetMin(plusDagen(A.minDagenVooruit || 0));
       if (A.beschikbaarheidUrl) {
