@@ -411,7 +411,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
     <p class="pp-step-sub">Het pakket geldt voor de zijruiten en achterruit. Alle pakketten zijn inclusief installatie en montage.</p>
     <div class="pp-preview">
       <svg data-pp="carSvg2" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Livebeeld tintniveau"></svg>
-      <div class="pp-hint">Livebeeld van het tintniveau van jouw pakket \u00b7 v3.14</div>
+      <div class="pp-hint">Livebeeld van het tintniveau van jouw pakket \u00b7 v3.15</div>
     </div>
     <div class="pp-grid pp-c2" data-pp="pkgGrid"></div>
   </section>
@@ -422,7 +422,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
     <p class="pp-step-sub">Selecteer de ruiten. In het livebeeld zie je direct welke ruiten getint worden.</p>
     <div class="pp-preview">
       <svg data-pp="carSvg" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Livebeeld van geselecteerde ruiten"></svg>
-      <div class="pp-hint">Livebeeld \u2014 jouw pakketkeuze bepaalt hoe donker de tint is \u00b7 v3.14</div>
+      <div class="pp-hint">Livebeeld \u2014 jouw pakketkeuze bepaalt hoe donker de tint is \u00b7 v3.15</div>
     </div>
 
     <h4 class="pp-group-title">Voorzijde</h4>
@@ -580,6 +580,40 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     const prijzen = () => PRIJZEN[state.body] || PRIJZEN.sedan;
 
+    /* -------- GA4-METING: één centrale functie, events via de dataLayer --------
+       GTM (GTM-PCJNQNCK) + CookieYes bepalen of er echt naar GA4 wordt gestuurd,
+       dus dit respecteert de cookietoestemming vanzelf. Geen persoonsgegevens:
+       alleen categorieën, stapnummers, optie-id's en prijssegmenten. */
+    const STAPNAMEN = { 1: "categorie", 2: "voertuig", 3: "pakket", 4: "ruiten", 5: "contact", 6: "pand", 7: "ramen", 8: "reclame" };
+    const REQUEST_TYPE = () => state.cat === "auto" ? "directe_prijs" : state.cat === "reclame" ? "prijsindicatie" : "offerte";
+    const PRICING_TYPE = () => state.cat === "auto" ? "direct" : state.cat === "reclame" ? "indicatie" : "offerte";
+    const stapNr = (step) => { const i = stappen().indexOf(step); return i < 0 ? step : i + 1; };
+    const prijsBucket = (n) => n < 250 ? "0-250" : n < 500 ? "250-500" : n < 750 ? "500-750" : n < 1000 ? "750-1000" : "1000+";
+    const gemeten = { start: false, views: {}, done: {}, form: false, prijs: null };
+    function track(event, params) {
+      try {
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push(Object.assign({ event: event, category: state.cat || "geen" }, params || {}));
+      } catch (e) { /* meten mag de configurator nooit breken */ }
+    }
+    function trackStart() {
+      if (gemeten.start) return;
+      gemeten.start = true;
+      track("configurator_start", {});
+    }
+    function trackOptie(groep, waarde) {
+      trackStart();
+      track("configurator_option_select", { option_group: groep, option_value: String(waarde), step_number: stapNr(state.step) });
+    }
+    function trackPrijs() {
+      let bedrag = null;
+      if (state.cat === "auto") bedrag = calc().total;
+      else if (state.cat === "reclame") bedrag = reclameInfo().prijs;
+      if (bedrag == null || !(bedrag > 0) || gemeten.prijs === bedrag) return;
+      gemeten.prijs = bedrag;
+      track("configurator_price_view", { price_amount: bedrag, currency: "EUR", price_bucket: prijsBucket(bedrag), pricing_type: PRICING_TYPE() });
+    }
+
     $("zbPrijs").textContent = "(+ " + euro(ZONNEBAND_PRIJS) + ")";
 
     function cardHTML(o) {
@@ -672,15 +706,22 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
       }
       update();
     }
-    $("kenteken").addEventListener("input", () => { state.handmatig = false; clearTimeout(rdwTimer); rdwTimer = setTimeout(kentekenCheck, 600); });
+    $("kenteken").addEventListener("input", () => { trackStart(); state.handmatig = false; clearTimeout(rdwTimer); rdwTimer = setTimeout(kentekenCheck, 600); });
     $("kenteken").addEventListener("blur", () => { clearTimeout(rdwTimer); kentekenCheck(); });   // fix 8: geen dubbele lookup
 
     $("catGrid").innerHTML = CATS.map(cardHTML).join("");
-    bindCards($("catGrid"), (id) => { state.cat = id; selectOne($("catGrid"), id); update(); });
+    bindCards($("catGrid"), (id) => {
+      state.cat = id; selectOne($("catGrid"), id);
+      trackStart();
+      const c = CATS.find((x) => x.id === id);
+      track("configurator_category_select", { category: id, category_label: c ? c.name : id, step_number: 1 });
+      update();
+    });
 
     $("bodyGrid").innerHTML = BODIES.map(cardHTML).join("");
     function kiesType(id) {
       state.body = id;
+      trackOptie("voertuigtype", id);
       state.windows = new Set(["achterportieren"]);
       selectOne($("bodyGrid"), id);
       delete $("carSvg").dataset.view;
@@ -691,7 +732,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
     bindCards($("bodyGrid"), (id) => { state.handmatig = true; kiesType(id); });
 
     $("pkgGrid").innerHTML = PKGS.map(cardHTML).join("");
-    bindCards($("pkgGrid"), (id) => { state.pkg = id; selectOne($("pkgGrid"), id); update(); });
+    bindCards($("pkgGrid"), (id) => { state.pkg = id; trackOptie("foliepakket", id); selectOne($("pkgGrid"), id); update(); });
     selectOne($("pkgGrid"), state.pkg);
 
     function renderWindows() {
@@ -713,6 +754,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
       ].join("");
       bindCards($("vrGrid"), (id) => {
         state.voorzijde = state.voorzijde === id ? null : id;
+        if (state.voorzijde) trackOptie("voorruit_folie", state.voorzijde);
         setView("front");
         $("vrGrid").querySelectorAll(".pp-card").forEach((c) => c.classList.toggle("pp-selected", c.dataset.id === state.voorzijde));
         update();
@@ -724,6 +766,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
       $("winGrid").innerHTML = list.map((w) => cardHTML({ id: w, name: winNaam(state.body, w), price: euro(P[pakket][w]) })).join("");
       bindCards($("winGrid"), (id) => {
         state.windows.has(id) ? state.windows.delete(id) : state.windows.add(id);
+        if (state.windows.has(id)) trackOptie("ruiten", id);
         setView(id === "achterruit" ? "rear" : "side");
         $("winGrid").querySelectorAll(".pp-card").forEach((c) => c.classList.toggle("pp-selected", state.windows.has(c.dataset.id)));
         update();
@@ -731,8 +774,16 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
       $("winGrid").querySelectorAll(".pp-card").forEach((c) => c.classList.toggle("pp-selected", state.windows.has(c.dataset.id)));
     }
 
-    $("removeFoil").addEventListener("change", (e) => { state.removeFoil = e.target.checked; update(); });
-    $("zonneband").addEventListener("change", (e) => { state.zonneband = e.target.checked; setView("front"); update(); });
+    $("removeFoil").addEventListener("change", (e) => { state.removeFoil = e.target.checked; if (e.target.checked) trackOptie("folie_verwijderen", "aan"); update(); });
+    $("zonneband").addEventListener("change", (e) => { state.zonneband = e.target.checked; if (e.target.checked) trackOptie("zonneband", "aan"); setView("front"); update(); });
+    // Formulier gestart: eerste veld aangeraakt (het widget-formulier is geen Webflow-form,
+    // dus dit overlapt niet met het site-brede form_start-script)
+    $("quoteForm").addEventListener("focusin", (e) => {
+      if (!gemeten.form && e.target.matches("input, textarea, select")) {
+        gemeten.form = true;
+        track("configurator_form_start", { request_type: REQUEST_TYPE() });
+      }
+    });
 
     state.view = "side";
     const carName = () => CAR_VOOR_TYPE[state.body] || STANDAARD_AUTO;
@@ -857,12 +908,16 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
     }
     function goto(step) {
       state.step = step;
+      if (!gemeten.views[step]) {
+        gemeten.views[step] = true;
+        track("configurator_step_view", { step_number: stapNr(step), step_name: STAPNAMEN[step] });
+      }
       for (let i = 1; i <= TOTAL_STEPS; i++) $("p" + i).classList.toggle("pp-visible", i === step);
       if (step === 4) { renderWindows(); state.view = "side"; drawView($("carSvg"), "side"); }
       if (step === 6) renderPand();
       if (step === 7) renderFloors();
       if (step === 8) renderReclame();
-      if (step === 5) renderSummary();
+      if (step === 5) { renderSummary(); trackPrijs(); }
       paintCar();
       update();
       root.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -871,12 +926,21 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
       if (state.step === 5) { submit(); return; }
       const seq = stappen();
       const i = seq.indexOf(state.step);
-      if (i >= 0 && i < seq.length - 1) goto(seq[i + 1]);
+      if (i >= 0 && i < seq.length - 1) {
+        if (!gemeten.done[state.step]) {
+          gemeten.done[state.step] = true;
+          track("configurator_step_complete", { step_number: stapNr(state.step), step_name: STAPNAMEN[state.step] });
+        }
+        goto(seq[i + 1]);
+      }
     }
     function prev() {
       const seq = stappen();
       const i = seq.indexOf(state.step);
-      if (i > 0) goto(seq[i - 1]);
+      if (i > 0) {
+        track("configurator_back", { from_step: stapNr(state.step), to_step: stapNr(seq[i - 1]) });
+        goto(seq[i - 1]);
+      }
     }
     $("btnNext").addEventListener("click", next);
     $("btnPrev").addEventListener("click", prev);
@@ -896,9 +960,9 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
     function renderPand() {
       if (!$("pandGrid").dataset.drawn) {
         $("pandGrid").innerHTML = PAND_TYPES.map(cardHTML).join("");
-        bindCards($("pandGrid"), (id) => { state.pand.type = id; selectOne($("pandGrid"), id); update(); });
+        bindCards($("pandGrid"), (id) => { state.pand.type = id; trackOptie("pand_type", id); selectOne($("pandGrid"), id); update(); });
         $("folieGrid").innerHTML = FOLIES.map(cardHTML).join("");
-        bindCards($("folieGrid"), (id) => { state.pand.folie = id; selectOne($("folieGrid"), id); update(); });
+        bindCards($("folieGrid"), (id) => { state.pand.folie = id; trackOptie("folie_soort", id); selectOne($("folieGrid"), id); update(); });
         $("pandGrid").dataset.drawn = "1";
       }
       selectOne($("pandGrid"), state.pand.type);
@@ -930,6 +994,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
         $("recVoertuigGrid").innerHTML = RECLAME_VOERTUIGEN.map(cardHTML).join("");
         bindCards($("recVoertuigGrid"), (id) => {
           state.reclame.voertuig = id;
+          trackOptie("reclame_voertuig", id);
           selectOne($("recVoertuigGrid"), id);
           renderReclamePakketten();
           update();
@@ -946,6 +1011,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
         : o)).join("");
       bindCards($("recPakketGrid"), (id) => {
         state.reclame.pakket = id;
+        trackOptie("reclame_pakket", id);
         selectOne($("recPakketGrid"), id);
         recIndicatieUpdate();
         update();
@@ -958,6 +1024,7 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
       $("recIndicatie").innerHTML = prijs != null
         ? "Indicatie: <strong>vanaf " + euro(prijs) + "</strong> \u2014 de definitieve prijs hangt af van het ontwerp, het aantal kleuren en het voertuig. Na je aanvraag ontvang je een offerte op maat."
         : "";
+      if (prijs != null) trackPrijs();
     }
     const getal = (v) => {
       const n = parseFloat(String(v).replace(",", "."));
@@ -1301,19 +1368,12 @@ svg[data-view="side"] .pp-zb{stroke-width:1.4}
           return;
         }
       }
-      // --- GA4 / Google Ads: conversie doorgeven (geen persoonsgegevens) ---
-      try {
-        const conversieWaarde = state.cat === "reclame"
-          ? (reclameInfo().prijs || 0)
-          : (isQuoteFlow() ? 0 : calc().total);
-        window.dataLayer = window.dataLayer || [];
-        window.dataLayer.push({
-          event: "offerte_aanvraag",
-          categorie: state.cat || "onbekend",
-          waarde: conversieWaarde,
-          valuta: "EUR",
-        });
-      } catch (e) {}
+      // --- GA4: lead telt pas na bevestigd succesvol versturen (geen persoonsgegevens) ---
+      track("generate_lead", {
+        request_type: REQUEST_TYPE(),
+        pricing_type: PRICING_TYPE(),
+        currency: "EUR",
+      });
 
       $("quoteForm").classList.add("pp-hidden");
       $("summaryBox").classList.add("pp-hidden");

@@ -50,3 +50,10 @@ Object.keys(PRIJZEN).forEach((b) => {
   if (xr !== plus) { console.log("FOUT prijstabel " + b + ": XR en XR+ hebben verschillende ramen"); process.exitCode = 1; }
 });
 console.log(process.exitCode ? "\nER ZIJN FOUTEN — niet uploaden." : "\nAlle checks geslaagd.");
+
+// 5. GA4-meting: centrale track-functie + alle afgesproken events aanwezig
+const ga4Events = ["configurator_start","configurator_category_select","configurator_step_view","configurator_step_complete","configurator_option_select","configurator_price_view","configurator_back","configurator_form_start","generate_lead"];
+ga4Events.forEach((e2) => { if (src.indexOf('"' + e2 + '"') < 0) { console.log("FOUT GA4-event ontbreekt: " + e2); process.exitCode = 1; } });
+if ((src.match(/function track\(/g) || []).length !== 1) { console.log("FOUT: track() niet precies 1x gedefinieerd"); process.exitCode = 1; }
+if (src.indexOf('event: "offerte_aanvraag"') >= 0) { console.log("FOUT: oud event offerte_aanvraag nog aanwezig (dubbeltelling)"); process.exitCode = 1; }
+console.log(process.exitCode ? "GA4-checks: FOUTEN" : "GA4-checks: OK");

@@ -1,5 +1,5 @@
 # PROJECT-DOSSIER — Pieter Plakt Prijsconfigurator
-*Stand: 2 november 2026 · widget v3.13 · dit bestand hoort in de GitHub-repo naast de widget.*
+*Stand: 14 november 2026 · widget v3.15 · dit bestand hoort in de GitHub-repo naast de widget.*
 
 **Voor een nieuwe Claude-sessie:** lees dit, kloon daarna ALTIJD eerst de live bron (`https://github.com/Rhala21/pieterplakt-widgets`) en bouw dáárop — nooit op bestanden uit een oud gesprek. Het Make-scenario kun je rechtstreeks lezen/wijzigen via de Make-koppeling. Werk na elke wijziging dit dossier mee bij in de repo.
 
@@ -13,11 +13,11 @@ Prijsconfigurator-widget voor pieterplakt.nl (ramen blinderen/tinten), als embed
 
 - **Repo:** `Rhala21/pieterplakt-widgets` → geserveerd via jsDelivr.
 - **Embed:** `<div id="pp-configurator"></div><script src="https://cdn.jsdelivr.net/gh/Rhala21/pieterplakt-widgets@main/pieterplakt-configurator.js" defer></script>`
-- **Bestanden in de repo:** `pieterplakt-configurator.js` (kern, ±80KB), `cars/*.json` (8 automodellen, on-demand geladen via pad naast het script of `window.PP_CARS`), `pieter-plakt-wit.png`, dit dossier en `test.js` (zelfcheck geldlogica: `node test.js` draaien na elke prijs- of formulewijziging, vóór het uploaden).
-- **Na elke wijziging:** bestand uploaden → cache purgen: `https://purge.jsdelivr.net/gh/Rhala21/pieterplakt-widgets@main/<bestand>` → harde refresh → **versienummer onder het livebeeld checken** (staat in de hint-teksten; bij elke wijziging ophogen, nu v3.14).
+- **Bestanden in de repo:** `pieterplakt-configurator.js` (kern, ±80KB), `cars/*.json` (8 automodellen, on-demand geladen via pad naast het script of `window.PP_CARS`), `pieter-plakt-wit.png`, dit dossier, `GA4-MEETPLAN.md` (meetsysteem: eventstructuur, GTM/GA4-inrichting, Looker-dashboard, testplan) en `test.js` (zelfcheck geldlogica: `node test.js` draaien na elke prijs- of formulewijziging, vóór het uploaden).
+- **Na elke wijziging:** bestand uploaden → cache purgen: `https://purge.jsdelivr.net/gh/Rhala21/pieterplakt-widgets@main/<bestand>` → harde refresh → **versienummer onder het livebeeld checken** (staat in de hint-teksten; bij elke wijziging ophogen, nu v3.15).
 - **Testbestand:** `index.html` (alles-in-één met `window.PP_CARS` ingebakken, `</script>` in de code escapen naar `<\/script>`) voor static.app/tiiny — nooit naar GitHub.
 
-## 3. Flow (stand v3.13)
+## 3. Flow (stand v3.15)
 
 Stap 1 categorie → per categorie een eigen route:
 - **Auto's** (prijs): kenteken + carrosserietype → foliepakket XR/XR+ → ruiten (Voorruit/Chameleon-kaarten, zonneband-checkbox, zijruiten/achterruit, folie verwijderen) → contact.
@@ -53,6 +53,9 @@ Webhook `pieterplakt-configurator-emailform` (hook 3346447, URL eindigt op `l3k3
 3. **Interne reiskostenmail** "Intern — reiskosten: naam" (filter: reiskosten bestaat, géén reply-to): naam, Adres, reiskosten in geel blok. Nooit beantwoorden richting klant.
 
 Webhook-velden: voornaam, achternaam, email, telefoon, voorkeursdatum, herkomst, locatie, straat, huisnummer, postcode, plaats, kenteken, bericht, overzicht, overzichtHtml, reiskosten, onderwerp. Terugval in de widget: FormSubmit (veldnaam "Adres").
+
+### GA4-meting (v3.15)
+Centrale `track()`-functie pusht naar de dataLayer (GTM-container GTM-PCJNQNCK via de Webflow-app "Google Site Tools"; CookieYes regelt consent). Events: configurator_start / category_select / step_view / step_complete / option_select / price_view / back / form_start en generate_lead (pas na bevestigd versturen; verving het oude offerte_aanvraag). Dedupe via het `gemeten`-object; step_number = routepositie zodat categorieën vergelijkbaar zijn; nooit persoonsgegevens in parameters. Alles staat uitgewerkt in GA4-MEETPLAN.md — dat bestand ALTIJD meelezen en bijwerken bij wijzigingen aan flow of meting; test.js bewaakt dat alle eventnamen blijven bestaan.
 
 ## 8. Werkwijze & lessen (voor elke volgende sessie)
 
